@@ -15,8 +15,8 @@ func init() {
 		Store: make(map[string]CacheEntry),
 	}
 
-	// Expire cache entries every 30 seconds
-	go func() {
+	// Checks for expired entries every 30 seconds and removes them
+	func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
@@ -36,9 +36,8 @@ func GetCacheEntry(eventID string) (bool, error) {
 		return false, nil
 	}
 
-	// Check if entry has expired
+	// Check if the entry has expired
 	if time.Now().After(entry.ExpiresAt) {
-		// Entry has expired, but we'll let the cleanup goroutine remove it
 		return false, nil
 	}
 
@@ -50,9 +49,9 @@ func SetCacheEntry(eventID string) (bool, error) {
 	globalCache.Mu.Lock()
 	defer globalCache.Mu.Unlock()
 
-	// Check if already exists
+	// Check if the entry already exists
 	if _, exists := globalCache.Store[eventID]; exists {
-		return false, nil // Already exists
+		return false, nil
 	}
 
 	now := time.Now()
