@@ -33,17 +33,10 @@ go mod download
 STRIPE_KEY=sk_test_your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 PORT=8080
+CLERK_SECRET_KEY=your_clerk_secret_key
 ```
 
 ## Configuration
-
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `STRIPE_KEY` | Your Stripe secret key | Yes |
-| `STRIPE_WEBHOOK_SECRET` | Webhook endpoint secret from Stripe | Yes |
-| `PORT` | Port number for the server to listen on | No (defaults to 8080) |
 
 ### Stripe Webhook Setup
 
