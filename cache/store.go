@@ -16,7 +16,7 @@ func init() {
 	}
 
 	// Checks for expired entries every 30 seconds and removes them
-	func() {
+	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
