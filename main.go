@@ -41,14 +41,6 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	event := stripe.Event{}
 
-	log.Printf("Event ID: %s", event.ID)
-
-	if err := json.Unmarshal(payload, &event); err != nil {
-		fmt.Fprintf(os.Stderr, "Webhook error while parsing basic request. %v\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	// Passes the payload to construct the Event (Go Stripe handler), also verifies that the payload is coming from Stripe
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 	signatureHeader := r.Header.Get("Stripe-Signature")
@@ -59,6 +51,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Event ID: %s", event.ID)
 	log.Printf("Event type: %s, Event created: %s", event.Type, time.Unix(event.Created, 0).Format("2006-01-02 15:04:05"))
 
 	// Debug: Print the full event data to see what's available
