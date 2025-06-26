@@ -41,6 +41,8 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	event := stripe.Event{}
 
+	log.Printf("Event ID: %s", event.ID)
+
 	if err := json.Unmarshal(payload, &event); err != nil {
 		fmt.Fprintf(os.Stderr, "Webhook error while parsing basic request. %v\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
