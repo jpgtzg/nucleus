@@ -16,9 +16,9 @@ import (
 
 // HandleWebhook handles the webhook request
 // It verifies that the request is coming from a webhook IP
-// It reads the request body and constructs the event
+// It reads the request body (if it's not too large) and constructs the event (if it's valid stripe event)
 // It processes the event asynchronously
-// It returns a 200 status code to acknowledge receipt
+// It returns immediately with a 200 status code to acknowledge receipt
 func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	// Verify that the request is coming from a webhook IP
 	clientIP := getClientIP(r)
@@ -28,6 +28,7 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// This part sets a maximum byte limit to the request body
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 
@@ -38,7 +39,8 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Passes the payload to construct the Event (Go Stripe handler), also verifies that the payload is coming from Stripe
+	// Verifies that the payload is coming from Stripe via the ConstructEvent function
+	// Passes the payload to construct the Event (Go Stripe handler)
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 	signatureHeader := r.Header.Get("Stripe-Signature")
 	event, err := webhook.ConstructEvent(payload, signatureHeader, endpointSecret)
@@ -48,13 +50,16 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return HTTP 200 immediately to acknowledge receipt
 	w.WriteHeader(http.StatusOK)
 
 	// Process the webhook event asynchronously
 	go processWebhookEvent(event)
 }
 
+// processWebhookEvent processes the webhook event asynchronously
+// It logs the event ID and type
+// It handles the payment intent succeeded event
+// It logs the event type if it's not handled
 func processWebhookEvent(event stripe.Event) {
 	log.Printf("Processing event ID: %s", event.ID)
 	log.Printf("Event type: %s, Event created: %s", event.Type, time.Unix(event.Created, 0).Format("2006-01-02 15:04:05"))
