@@ -7,13 +7,57 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/webhook"
 )
 
+// fetchWebhookIPs fetches the list of webhook IPs from the Stripe API
+func fetchWebhookIPs() []string {
+	response, err := http.Get("https://stripe.com/files/ips/ips_webhooks.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var data struct {
+		Webhooks []string `json:"WEBHOOKS"`
+	}
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return data.Webhooks
+}
+
+// isWebhookIP checks if the given IP is in the list of webhook IPs
+func isWebhookIP(ip string) bool {
+	ips := fetchWebhookIPs()
+	for _, webhookIP := range ips {
+		if webhookIP == ip {
+			return true
+		}
+	}
+	return false
+}
+
 func HandleWebhook(w http.ResponseWriter, r *http.Request) {
+	// Verify that the request is coming from a webhook IP
+	clientIP := getClientIP(r)
+	if !isWebhookIP(clientIP) {
+		log.Printf("Webhook request received from non-webhook IP: %s", clientIP)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 
@@ -59,4 +103,36 @@ func processWebhookEvent(event stripe.Event) {
 		log.Printf("Unhandled event type: %s", event.Type)
 		return
 	}
+}
+
+// getClientIP extracts the real client IP address from the request
+// It checks various headers that might contain the real IP when behind a proxy
+func getClientIP(r *http.Request) string {
+	// Check for X-Forwarded-For header (most common proxy header)
+	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		// X-Forwarded-For can contain multiple IPs separated by commas
+		// The first one is usually the original client IP
+		if commaIndex := strings.Index(forwardedFor, ","); commaIndex != -1 {
+			return strings.TrimSpace(forwardedFor[:commaIndex])
+		}
+		return strings.TrimSpace(forwardedFor)
+	}
+
+	// Check for X-Real-IP header (used by some reverse proxies)
+	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		return strings.TrimSpace(realIP)
+	}
+
+	// Check for X-Client-IP header
+	if clientIP := r.Header.Get("X-Client-IP"); clientIP != "" {
+		return strings.TrimSpace(clientIP)
+	}
+
+	// Check for CF-Connecting-IP header (Cloudflare)
+	if cfIP := r.Header.Get("CF-Connecting-IP"); cfIP != "" {
+		return strings.TrimSpace(cfIP)
+	}
+
+	// Fall back to RemoteAddr if no proxy headers are present
+	return r.RemoteAddr
 }
