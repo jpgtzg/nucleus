@@ -14,6 +14,11 @@ import (
 	"github.com/stripe/stripe-go/v82/webhook"
 )
 
+// HandleWebhook handles the webhook request
+// It verifies that the request is coming from a webhook IP
+// It reads the request body and constructs the event
+// It processes the event asynchronously
+// It returns a 200 status code to acknowledge receipt
 func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	// Verify that the request is coming from a webhook IP
 	clientIP := getClientIP(r)
