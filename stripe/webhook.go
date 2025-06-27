@@ -24,51 +24,39 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event := stripe.Event{}
-
 	// Passes the payload to construct the Event (Go Stripe handler), also verifies that the payload is coming from Stripe
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 	signatureHeader := r.Header.Get("Stripe-Signature")
-	event, err = webhook.ConstructEvent(payload, signatureHeader, endpointSecret)
+	event, err := webhook.ConstructEvent(payload, signatureHeader, endpointSecret)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Webhook signature verification failed. %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Event ID: %s", event.ID)
+	// Return HTTP 200 immediately to acknowledge receipt
+	w.WriteHeader(http.StatusOK)
+
+	// Process the webhook event asynchronously
+	go processWebhookEvent(event)
+}
+
+func processWebhookEvent(event stripe.Event) {
+	log.Printf("Processing event ID: %s", event.ID)
 	log.Printf("Event type: %s, Event created: %s", event.Type, time.Unix(event.Created, 0).Format("2006-01-02 15:04:05"))
 
-	// Debug: Print the full event data to see what's available
-	//eventJSON, _ := json.MarshalIndent(event, "", "  ")
-	//log.Printf("Full event data: %s", string(eventJSON))
-
-	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
 	case "payment_intent.succeeded":
 		var paymentIntent stripe.PaymentIntent
 		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("Error parsing webhook JSON: %v", err)
 			return
 		}
 		log.Printf("Successful payment for %d.", paymentIntent.Amount)
-		// Then define and call a func to handle the successful payment intent.
-		// handlePaymentIntentSucceeded(paymentIntent)
-	case "payment_method.attached":
-		var paymentMethod stripe.PaymentMethod
-		err := json.Unmarshal(event.Data.Raw, &paymentMethod)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		// Then define and call a func to handle the successful attachment of a PaymentMethod.
-		// handlePaymentMethodAttached(paymentMethod)
+		// TODO: Handle payment intent success
 	default:
-		//fmt.Fprintf(os.Stderr, "Unhandled event type: %s\n", event.Type)
+		log.Printf("Unhandled event type: %s", event.Type)
+		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
