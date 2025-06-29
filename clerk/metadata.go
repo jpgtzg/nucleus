@@ -8,11 +8,16 @@ import (
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/clerk/clerk-sdk-go/v2/user"
+	"github.com/joho/godotenv"
 )
 
 var globalCtx context.Context
 
 func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Warning: .env file not found, using system environment variables")
+	}
 
 	globalCtx = context.Background()
 	clerkAPIKey := os.Getenv("CLERK_SECRET_KEY")
