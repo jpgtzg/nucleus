@@ -72,7 +72,16 @@ func processWebhookEvent(event stripe.Event) {
 			return
 		}
 		log.Printf("Successful payment for %d.", paymentIntent.Amount)
-		// TODO: Handle payment intent success
+		handlePaymentIntentSucceeded(paymentIntent)
+	case "invoice.paid":
+		var invoice stripe.Invoice
+		err := json.Unmarshal(event.Data.Raw, &invoice)
+		if err != nil {
+			log.Printf("Error parsing webhook JSON: %v", err)
+			return
+		}
+		log.Printf("Invoice paid for %d.", invoice.AmountPaid)
+		handleInvoicePaid(invoice)
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
 		return
@@ -101,4 +110,18 @@ func getClientIP(r *http.Request) string {
 		return strings.TrimSpace(cfIP)
 	}
 	return r.RemoteAddr
+}
+
+func handlePaymentIntentSucceeded(paymentIntent stripe.PaymentIntent) {
+
+}
+
+func handleInvoicePaid(invoice stripe.Invoice) {
+	fmt.Println("Invoice paid")
+	fmt.Println("Invoice lines:")
+	for _, line := range invoice.Lines.Data {
+		for key, value := range line.Metadata {
+			fmt.Printf("  %s: %s\n", key, value)
+		}
+	}
 }
