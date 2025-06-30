@@ -28,7 +28,21 @@ func init() {
 	clerk.SetKey(clerkAPIKey)
 }
 
-func UpdateUserMetadata(userId string, metadata map[string]string) error {
+func GetUserMetadata(userId string) (map[string]interface{}, error) {
+	currentMetadata, err := user.Get(globalCtx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata map[string]interface{}
+	if err := json.Unmarshal(currentMetadata.PublicMetadata, &metadata); err != nil {
+		return nil, err
+	}
+
+	return metadata, nil
+}
+
+func UpdateUserMetadata(userId string, metadata map[string]interface{}) error {
 	jsonData, err := json.Marshal(metadata)
 	if err != nil {
 		return err
