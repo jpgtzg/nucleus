@@ -6,9 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"nucleus/clerk"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/webhook"
@@ -56,31 +56,24 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // processWebhookEvent processes the webhook event asynchronously
-// It logs the event ID and type
-// It handles the payment intent succeeded event
+// It handles the invoice paid event
 // It logs the event type if it's not handled
 func processWebhookEvent(event stripe.Event) {
-	log.Printf("Processing event ID: %s", event.ID)
-	log.Printf("Event type: %s, Event created: %s", event.Type, time.Unix(event.Created, 0).Format("2006-01-02 15:04:05"))
 
 	switch event.Type {
-	case "payment_intent.succeeded":
-		var paymentIntent stripe.PaymentIntent
-		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v", err)
-			return
-		}
-		log.Printf("Successful payment for %d.", paymentIntent.Amount)
-		handlePaymentIntentSucceeded(paymentIntent)
 	case "invoice.paid":
 		var invoice stripe.Invoice
-		err := json.Unmarshal(event.Data.Raw, &invoice)
+		jsonData, err := json.Marshal(event.Data.Object)
+		if err != nil {
+			log.Printf("Error marshaling webhook data: %v", err)
+			return
+		}
+
+		err = json.Unmarshal(jsonData, &invoice)
 		if err != nil {
 			log.Printf("Error parsing webhook JSON: %v", err)
 			return
 		}
-		log.Printf("Invoice paid for %d.", invoice.AmountPaid)
 		handleInvoicePaid(invoice)
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
@@ -112,16 +105,37 @@ func getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-func handlePaymentIntentSucceeded(paymentIntent stripe.PaymentIntent) {
-
+// handleInvoicePaid handles the invoice paid event
+// It adds the product ID to the user metadata (it requires the stripe ID to be the same as the clerk user ID - front end task)
+func handleInvoicePaid(invoice stripe.Invoice) {
+	productId := invoice.Lines.Data[0].Pricing.PriceDetails.Product
+	customerId := invoice.Customer.ID
+	addProductIdToUserMetadata(customerId, productId)
+	log.Println(" Stripe User ID:", invoice.Customer.ID)
 }
 
-func handleInvoicePaid(invoice stripe.Invoice) {
-	fmt.Println("Invoice paid")
-	fmt.Println("Invoice lines:")
-	for _, line := range invoice.Lines.Data {
-		for key, value := range line.Metadata {
-			fmt.Printf("  %s: %s\n", key, value)
+// addProductIdToUserMetadata adds the product ID to the user metadata
+// It gets the user metadata, adds the product ID to the products_id array, and updates the user metadata
+func addProductIdToUserMetadata(customerId string, productId string) {
+
+	metadata, err := clerk.GetUserMetadata(customerId)
+	if err != nil {
+		log.Printf("Error getting user metadata: %v", err)
+		return
+	}
+
+	// appends the current metadata with the new product ID, if it doesn't exist, it creates a new products_id array
+	if stripeData, ok := metadata["stripe"].(map[string]interface{}); ok {
+		if productsID, ok := stripeData["products_id"].([]interface{}); ok {
+			stripeData["products_id"] = append(productsID, productId)
+		} else {
+			stripeData["products_id"] = []interface{}{productId}
+		}
+	} else {
+		metadata["stripe"] = map[string]interface{}{
+			"products_id": []interface{}{productId},
 		}
 	}
+
+	clerk.UpdateUserMetadata(customerId, metadata)
 }
