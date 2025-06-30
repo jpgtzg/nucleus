@@ -13,14 +13,18 @@ Nucleus is the central control service of the platform. It synchronizes billing 
 - **Clerk User Management**: Full CRUD operations for user identity management
 - **Environment-based Configuration**: Uses environment variables for secure configuration management
 - **Asynchronous Processing**: Webhook events are processed asynchronously for better performance
+- **Docker Support**: Containerized deployment with optimized build process
 
 ## Prerequisites
 
-- Go 1.24.4 or higher
+- Go 1.24.4 or higher (for local development)
+- Docker (for containerized deployment)
 - Stripe account with webhook endpoint configured
 - Clerk account for user identity management
 
 ## Installation
+
+### Local Development
 
 1. Clone the repository:
 ```bash
@@ -40,6 +44,28 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 PORT=8080
 CLERK_SECRET_KEY=your_clerk_secret_key
 ```
+
+### Docker Deployment
+
+1. Clone the repository:
+```bash
+git clone https://github.com/SAMLA-io/nucleus.git
+cd nucleus
+```
+
+2. Create a `.env` file with your configuration (same as above)
+
+3. Build the Docker image:
+```bash
+docker build -t nucleus .
+```
+
+4. Run the container:
+```bash
+docker run -p 8080:8080 --env-file .env nucleus
+```
+
+The server will start listening on port 8080 and be accessible at `http://localhost:8080`.
 
 ## Configuration
 
@@ -62,11 +88,38 @@ CLERK_SECRET_KEY=your_clerk_secret_key
 
 ### Running the Server
 
+#### Local Development
 ```bash
 go run main.go
 ```
 
+#### Docker
+```bash
+# Build the image
+docker build -t nucleus .
+
+# Run the container
+docker run -p 8080:8080 --env-file .env nucleus
+
+# Run in detached mode
+docker run -d -p 8080:8080 --env-file .env --name nucleus-app nucleus
+
+# View logs
+docker logs nucleus-app
+
+# Stop the container
+docker stop nucleus-app
+```
+
 The server will start listening on the configured port (default: 8080).
+
+### Environment Variables
+
+The application supports both local `.env` files and Docker environment variable injection:
+
+- **Local Development**: Uses `godotenv` to load `.env` file
+- **Docker**: Uses `--env-file .env` to pass environment variables to the container
+- **Fallback**: If `.env` file is not found, the application uses system environment variables
 
 ### Webhook Endpoints
 
@@ -115,6 +168,8 @@ The service includes full user management capabilities through Clerk:
 ```
 nucleus/
 ├── main.go              # Main application entry point
+├── Dockerfile           # Docker container configuration
+├── .dockerignore        # Docker build context exclusions
 ├── go.mod               # Go module dependencies
 ├── go.sum               # Go module checksums
 ├── README.md            # This file
@@ -130,6 +185,15 @@ nucleus/
     └── cache/
         └── cache_types.go # Cache data structures and cleanup logic
 ```
+
+### Docker Configuration
+
+The project includes optimized Docker configuration:
+
+- **Multi-stage build**: Uses `golang:1.24-alpine` for efficient builds
+- **Security**: `.dockerignore` excludes sensitive files (`.env`, `.git`, etc.)
+- **Environment handling**: Graceful fallback from `.env` files to system environment variables
+- **Port exposure**: Exposes port 8080 for webhook endpoints
 
 ### Cache System
 
@@ -180,6 +244,15 @@ Example with Stripe CLI:
 stripe listen --forward-to localhost:8080/webhook
 ```
 
+For Docker testing:
+```bash
+# Run with Stripe CLI forwarding
+stripe listen --forward-to localhost:8080/webhook
+
+# In another terminal, run the container
+docker run -p 8080:8080 --env-file .env nucleus
+```
+
 ## Security Considerations
 
 - Always verify webhook signatures using the provided secret
@@ -190,6 +263,8 @@ stripe listen --forward-to localhost:8080/webhook
 - Consider rate limiting for webhook endpoints
 - Event deduplication prevents replay attacks
 - Automatic cache cleanup prevents memory exhaustion
+- `.dockerignore` prevents sensitive files from being included in Docker images
+- Environment variables are passed securely to containers without embedding in images
 
 ## Dependencies
 
