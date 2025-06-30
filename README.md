@@ -5,9 +5,11 @@ Nucleus is the central control service of the platform. It synchronizes billing 
 ## Features
 
 - **Stripe Webhook Handler**: Processes Stripe webhook events for payment processing
-- **Payment Intent Management**: Handles successful payment intents with logging
+- **Invoice Payment Processing**: Handles successful invoice payments and updates user product access
+- **Product Access Management**: Automatically adds purchased product IDs to user metadata
 - **Secure Webhook Verification**: Validates webhook signatures and IP addresses to ensure requests come from Stripe
-- **Event Deduplication**: In-memory cache system prevents duplicate webhook processing
+- **Dynamic IP Validation**: Fetches current Stripe webhook IPs dynamically for enhanced security
+- **Event Deduplication**: In-memory cache system prevents duplicate webhook processing with automatic cleanup
 - **Clerk User Management**: Full CRUD operations for user identity management
 - **Environment-based Configuration**: Uses environment variables for secure configuration management
 - **Asynchronous Processing**: Webhook events are processed asynchronously for better performance
@@ -47,7 +49,7 @@ CLERK_SECRET_KEY=your_clerk_secret_key
 2. Navigate to Developers > Webhooks
 3. Create a new webhook endpoint with your server URL (e.g., `https://yourdomain.com/webhook`)
 4. Select the following events to listen for:
-   - `payment_intent.succeeded`
+   - `invoice.paid`
 5. Copy the webhook signing secret and add it to your `.env` file
 
 ### Clerk Setup
@@ -73,14 +75,14 @@ The server will start listening on the configured port (default: 8080).
 Handles incoming Stripe webhook events.
 
 **Supported Events:**
-- `payment_intent.succeeded`: Triggered when a payment intent is successfully completed
+- `invoice.paid`: Triggered when an invoice is successfully paid, automatically adds the product ID to user metadata
 
 **Security Features:**
 - Request body size limit: 64KB
 - Webhook signature verification
-- IP address validation against Stripe's webhook IP list
+- Dynamic IP address validation against Stripe's current webhook IP list
 - JSON payload validation
-- Event deduplication with 30-second TTL
+- Event deduplication with 30-second TTL and automatic cleanup
 
 **Response Codes:**
 - `200 OK`: Event processed successfully
@@ -88,14 +90,23 @@ Handles incoming Stripe webhook events.
 - `403 Forbidden`: Request from non-Stripe IP address
 - `503 Service Unavailable`: Error reading request body
 
+### Product Access Management
+
+When an invoice is paid, the service automatically:
+
+1. Extracts the product ID from the invoice line items
+2. Retrieves the current user metadata from Clerk
+3. Adds the product ID to the user's `stripe.products_id` array in metadata
+4. Updates the user's metadata in Clerk
+
+This ensures users have immediate access to purchased products across the platform.
+
 ### Clerk User Management
 
 The service includes full user management capabilities through Clerk:
 
-- **Create User**: `clerk.CreateUser(userParams)`
-- **Get User**: `clerk.GetUser(userId)`
-- **List Users**: `clerk.ListUsers()`
-- **Delete User**: `clerk.DeleteUser(userId)`
+- **Get User Metadata**: `clerk.GetUserMetadata(userId)`
+- **Update User Metadata**: `clerk.UpdateUserMetadata(userId, metadata)`
 
 ## Development
 
@@ -109,25 +120,30 @@ nucleus/
 ├── README.md            # This file
 ├── .gitignore           # Git ignore rules
 ├── cache/
-│   └── store.go         # Event cache management
+│   └── store.go         # Event cache management with automatic cleanup
 ├── clerk/
-│   └── metadata.go      # Clerk user management
+│   └── metadata.go      # Clerk user metadata management
 ├── stripe/
-│   ├── address.go       # Webhook IP validation
-│   └── webhook.go       # Stripe webhook handler
+│   ├── address.go       # Dynamic webhook IP validation
+│   └── webhook.go       # Stripe webhook handler and invoice processing
 └── types/
     └── cache/
-        └── cache_types.go # Cache data structures
+        └── cache_types.go # Cache data structures and cleanup logic
 ```
 
 ### Cache System
 
-The application includes an in-memory cache system for webhook event deduplication:
+The application includes a sophisticated in-memory cache system for webhook event deduplication:
 
-- **Automatic Cleanup**: Expired entries are removed every 30 seconds
+- **Automatic Cleanup**: Expired entries are removed every 30 seconds via background goroutine
 - **Thread-safe**: Uses read-write mutex for concurrent access
 - **TTL**: 30-second expiration for cache entries
 - **Statistics**: Get cache size and entry information
+- **Memory Efficient**: Automatically removes expired entries to prevent memory leaks
+
+### Webhook IP Validation
+
+The service dynamically fetches the current list of Stripe webhook IPs from Stripe's official endpoint (`https://stripe.com/files/ips/ips_webhooks.json`) to ensure the most up-to-date security validation.
 
 ### Adding New Webhook Events
 
@@ -137,7 +153,12 @@ To handle additional Stripe webhook events:
 ```go
 case "your.event.type":
     var eventData YourEventStruct
-    err := json.Unmarshal(event.Data.Raw, &eventData)
+    jsonData, err := json.Marshal(event.Data.Object)
+    if err != nil {
+        log.Printf("Error marshaling webhook data: %v", err)
+        return
+    }
+    err = json.Unmarshal(jsonData, &eventData)
     if err != nil {
         log.Printf("Error parsing webhook JSON: %v", err)
         return
@@ -162,12 +183,13 @@ stripe listen --forward-to localhost:8080/webhook
 ## Security Considerations
 
 - Always verify webhook signatures using the provided secret
-- Webhook IP validation ensures requests only come from Stripe
+- Dynamic webhook IP validation ensures requests only come from current Stripe IPs
 - Use HTTPS in production
 - Keep your Stripe and Clerk keys secure and never commit them to version control
 - Implement proper error handling and logging
 - Consider rate limiting for webhook endpoints
 - Event deduplication prevents replay attacks
+- Automatic cache cleanup prevents memory exhaustion
 
 ## Dependencies
 
