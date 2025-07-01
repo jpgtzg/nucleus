@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"nucleus/clerk"
 	"os"
 	"strings"
 
@@ -56,27 +55,67 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // processWebhookEvent processes the webhook event asynchronously
-// It handles the invoice paid event
+// It handles subscription and invoice events
 // It logs the event type if it's not handled
 func processWebhookEvent(event stripe.Event) {
 
 	switch event.Type {
-	case "invoice.paid":
-		var invoice stripe.Invoice
+	case "customer.subscription.created":
+		var subscription stripe.Subscription
 		jsonData, err := json.Marshal(event.Data.Object)
 		if err != nil {
 			log.Printf("Error marshaling webhook data: %v", err)
 			return
 		}
 
-		err = json.Unmarshal(jsonData, &invoice)
+		err = json.Unmarshal(jsonData, &subscription)
 		if err != nil {
 			log.Printf("Error parsing webhook JSON: %v", err)
 			return
 		}
-		handleInvoicePaid(invoice)
+		HandleSubscriptionCreated(subscription)
+
+	case "customer.subscription.updated":
+		var subscription stripe.Subscription
+		jsonData, err := json.Marshal(event.Data.Object)
+		if err != nil {
+			log.Printf("Error marshaling webhook data: %v", err)
+			return
+		}
+
+		err = json.Unmarshal(jsonData, &subscription)
+		if err != nil {
+			log.Printf("Error parsing webhook JSON: %v", err)
+			return
+		}
+		HandleSubscriptionUpdated(subscription)
+
+	case "customer.subscription.deleted":
+		var subscription stripe.Subscription
+		jsonData, err := json.Marshal(event.Data.Object)
+		if err != nil {
+			log.Printf("Error marshaling webhook data: %v", err)
+			return
+		}
+
+		err = json.Unmarshal(jsonData, &subscription)
+		if err != nil {
+			log.Printf("Error parsing webhook JSON: %v", err)
+			return
+		}
+		HandleSubscriptionDeleted(subscription)
+
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
+
+		jsonData, err := json.Marshal(event.Data.Object)
+		if err != nil {
+			log.Printf("Error marshaling webhook data: %v", err)
+			return
+		}
+
+		os.WriteFile(event.ID+"_"+string(event.Type)+".json", jsonData, 0644)
+
 		return
 	}
 }
@@ -103,39 +142,4 @@ func getClientIP(r *http.Request) string {
 		return strings.TrimSpace(cfIP)
 	}
 	return r.RemoteAddr
-}
-
-// handleInvoicePaid handles the invoice paid event
-// It adds the product ID to the user metadata (it requires the stripe ID to be the same as the clerk user ID - front end task)
-func handleInvoicePaid(invoice stripe.Invoice) {
-	productId := invoice.Lines.Data[0].Pricing.PriceDetails.Product
-	customerId := invoice.Customer.ID
-	addProductIdToUserMetadata(customerId, productId)
-	log.Println(" Stripe User ID:", invoice.Customer.ID)
-}
-
-// addProductIdToUserMetadata adds the product ID to the user metadata
-// It gets the user metadata, adds the product ID to the products_id array, and updates the user metadata
-func addProductIdToUserMetadata(customerId string, productId string) {
-
-	metadata, err := clerk.GetUserMetadata(customerId)
-	if err != nil {
-		log.Printf("Error getting user metadata: %v", err)
-		return
-	}
-
-	// appends the current metadata with the new product ID, if it doesn't exist, it creates a new products_id array
-	if stripeData, ok := metadata["stripe"].(map[string]interface{}); ok {
-		if productsID, ok := stripeData["products_id"].([]interface{}); ok {
-			stripeData["products_id"] = append(productsID, productId)
-		} else {
-			stripeData["products_id"] = []interface{}{productId}
-		}
-	} else {
-		metadata["stripe"] = map[string]interface{}{
-			"products_id": []interface{}{productId},
-		}
-	}
-
-	clerk.UpdateUserMetadata(customerId, metadata)
 }
