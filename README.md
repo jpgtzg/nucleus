@@ -75,6 +75,9 @@ The server will start listening on port 8080 and be accessible at `http://localh
 2. Navigate to Developers > Webhooks
 3. Create a new webhook endpoint with your server URL (e.g., `https://yourdomain.com/webhook`)
 4. Select the following events to listen for:
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
    - `invoice.paid`
 5. Copy the webhook signing secret and add it to your `.env` file
 
@@ -128,7 +131,10 @@ The application supports both local `.env` files and Docker environment variable
 Handles incoming Stripe webhook events.
 
 **Supported Events:**
-- `invoice.paid`: Triggered when an invoice is successfully paid, automatically adds the product ID to user metadata
+- `customer.subscription.created`: Triggered when a new subscription is created, adds subscription details to user metadata
+- `customer.subscription.updated`: Triggered when a subscription is updated (status changes, billing updates, etc.)
+- `customer.subscription.deleted`: Triggered when a subscription is canceled or deleted, removes subscription from user metadata
+- `invoice.paid`: Triggered when an invoice is successfully paid, maintains backward compatibility with product ID tracking
 
 **Security Features:**
 - Request body size limit: 64KB
@@ -153,6 +159,63 @@ When an invoice is paid, the service automatically:
 4. Updates the user's metadata in Clerk
 
 This ensures users have immediate access to purchased products across the platform.
+
+### Subscription-Based Access Control
+
+The service now provides comprehensive subscription management and access control:
+
+#### Subscription Tracking
+- **Automatic Updates**: Subscription status is automatically updated via webhook events
+- **Expiration Tracking**: Current period end dates are tracked for each subscription
+- **Status Management**: Handles active, canceled, past due, and other subscription states
+- **Multi-Product Support**: Users can have multiple active subscriptions for different products
+
+#### Access Control API
+The service provides helper functions for checking user access:
+
+```go
+// Initialize access control
+ac := stripe.NewAccessControl()
+
+// Check if user has access to a specific product
+hasAccess := ac.HasAccess("cus_123", "prod_premium")
+
+// Get all products user has access to
+products := ac.GetUserProducts("cus_123")
+
+// Check feature access
+canUseFeature := ac.CheckFeatureAccess("cus_123", "premium_chat")
+
+// Get user's subscription tier
+tier := ac.GetUserTier("cus_123")
+
+// Check if subscription is expiring soon
+expiringSoon := ac.IsSubscriptionExpiringSoon("cus_123", "prod_premium", 7)
+```
+
+#### Metadata Structure
+User metadata now includes comprehensive subscription information:
+
+```json
+{
+  "stripe": {
+    "subscriptions": [
+      {
+        "id": "sub_123",
+        "status": "active",
+        "current_period_end": 1753903901,
+        "cancel_at_period_end": false,
+        "product_id": "prod_premium",
+        "price_id": "price_123"
+      }
+    ],
+    "products_id": ["prod_premium"] // Legacy support
+  }
+}
+```
+
+#### Migration from Product IDs
+The system maintains backward compatibility with the existing `products_id` array while providing the new subscription-based access control. You can gradually migrate your application to use the new access control methods.
 
 ### Clerk User Management
 
