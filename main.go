@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	"nucleus/api"
+	"nucleus/auth"
 	"nucleus/stripe"
 
 	"github.com/joho/godotenv"
@@ -20,6 +22,8 @@ func main() {
 	stripeSDK.Key = os.Getenv("STRIPE_KEY")
 
 	http.HandleFunc("/webhook", stripe.HandleWebhook)
+	http.Handle("/user/subscriptions", auth.VerifyingMiddleware(http.HandlerFunc(api.GetUserSuscriptionsHandler)))
+
 	addr := fmt.Sprintf(":%s", os.Getenv("PORT"))
 	fmt.Println("Listening on", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
