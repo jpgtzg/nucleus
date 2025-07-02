@@ -23,7 +23,7 @@ func main() {
 	stripeSDK.Key = os.Getenv("STRIPE_KEY")
 
 	http.HandleFunc("/stripe/webhook", stripe.HandleWebhook)
-	http.HandleFunc("/clerk/webhook", clerk.WebhookHandler)
+	http.HandleFunc("/clerk/webhook", clerk.HandleWebhook)
 	http.Handle("/user/subscriptions", auth.VerifyingMiddleware(http.HandlerFunc(api.GetUserSuscriptionsHandler)))
 
 	addr := fmt.Sprintf(":%s", os.Getenv("PORT"))

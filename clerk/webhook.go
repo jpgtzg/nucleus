@@ -37,8 +37,8 @@ func init() {
 	}
 }
 
-// WebhookHandler is a handler that receives webhooks from Clerk and processes them
-func WebhookHandler(w http.ResponseWriter, r *http.Request) {
+// HandleWebhook is a handler that receives webhooks from Clerk and processes them
+func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -52,6 +52,7 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify the webhook signature using svix
 	err = wh.Verify(payload, header)
 	if err != nil {
 		log.Printf("Webhook verification failed: %v", err)
@@ -67,15 +68,9 @@ func WebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Process the webhook event
-	if err := processWebhookEvent(event); err != nil {
-		log.Printf("Error processing webhook event: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Webhook processed successfully"))
+
+	go processWebhookEvent(event)
 }
 
 // ProcessWebhook is a function that processes the webhook from Clerk
