@@ -8,6 +8,7 @@ import (
 type CacheEntry = cache.CacheEntry
 type EventCache = cache.EventCache
 
+// globalCache is the global cache for Stripe events, so we can avoid processing the same event multiple times
 var globalCache *EventCache
 
 func init() {

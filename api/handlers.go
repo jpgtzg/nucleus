@@ -7,6 +7,7 @@ import (
 	"nucleus/clerk"
 )
 
+// GetUserSuscriptionsHandler is a handler that returns the user's subscriptions
 func GetUserSuscriptionsHandler(w http.ResponseWriter, r *http.Request) {
 	userId, ok := auth.GetUserID(r)
 	if !ok {

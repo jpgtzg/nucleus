@@ -19,7 +19,7 @@ func GetUserID(r *http.Request) (string, bool) {
 	return userID, ok
 }
 
-// VerifyingMiddleware is a middleware that verifies the passed JWT token and extracts the user ID from it to check user permissions
+// VerifyingMiddleware is the general middleware that verifies the passed JWT Token from clerk and extracts the user ID to pass it to the next handler
 func VerifyingMiddleware(next http.Handler) http.Handler {
 	return clerkhttp.RequireHeaderAuthorization()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, err := extractUserIDFromAuthHeader(r)
