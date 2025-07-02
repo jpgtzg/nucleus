@@ -23,12 +23,11 @@ func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscr
 
 	// Create subscription info
 	subscriptionInfo := map[string]interface{}{
-		"id":                   subscription.ID,
-		"status":               subscription.Status,
-		"current_period_end":   currentPeriodEnd,
-		"cancel_at_period_end": subscription.CancelAtPeriodEnd,
-		"product_id":           subscription.Items.Data[0].Price.Product.ID,
-		"price_id":             subscription.Items.Data[0].Price.ID,
+		"id":                 subscription.ID,
+		"status":             subscription.Status,
+		"current_period_end": currentPeriodEnd,
+		"product_id":         subscription.Items.Data[0].Price.Product.ID,
+		"price_id":           subscription.Items.Data[0].Price.ID,
 	}
 
 	// Initialize stripe data if it doesn't exist
@@ -41,7 +40,6 @@ func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscr
 						// Update existing subscription
 						subMap["status"] = subscription.Status
 						subMap["current_period_end"] = currentPeriodEnd
-						subMap["cancel_at_period_end"] = subscription.CancelAtPeriodEnd
 						subMap["product_id"] = subscription.Items.Data[0].Price.Product.ID
 						subMap["price_id"] = subscription.Items.Data[0].Price.ID
 						UpdateUserMetadata(customerId, metadata)
@@ -84,12 +82,11 @@ func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Sub
 					if subMap["id"] == subscription.ID {
 						// Update subscription info
 						subscriptions[i] = map[string]interface{}{
-							"id":                   subscription.ID,
-							"status":               subscription.Status,
-							"current_period_end":   currentPeriodEnd,
-							"cancel_at_period_end": subscription.CancelAtPeriodEnd,
-							"product_id":           subscription.Items.Data[0].Price.Product.ID,
-							"price_id":             subscription.Items.Data[0].Price.ID,
+							"id":                 subscription.ID,
+							"status":             subscription.Status,
+							"current_period_end": currentPeriodEnd,
+							"product_id":         subscription.Items.Data[0].Price.Product.ID,
+							"price_id":           subscription.Items.Data[0].Price.ID,
 						}
 						UpdateUserMetadata(customerId, metadata)
 						return
