@@ -32,13 +32,13 @@ func init() {
 }
 
 func GetUserMetadata(userId string) (map[string]interface{}, error) {
-	currentMetadata, err := user.Get(globalCtx, userId)
+	user, err := user.Get(globalCtx, userId)
 	if err != nil {
 		return nil, err
 	}
 
 	var metadata map[string]interface{}
-	if err := json.Unmarshal(currentMetadata.PublicMetadata, &metadata); err != nil {
+	if err := json.Unmarshal(user.PublicMetadata, &metadata); err != nil {
 		return nil, err
 	}
 
