@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -33,7 +32,6 @@ func VerifyingMiddleware(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), UserIDKey{}, userID)
 		r = r.WithContext(ctx)
 
-		log.Printf("Authenticated user: %s", userID)
 		next.ServeHTTP(w, r)
 	}))
 }
