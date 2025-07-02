@@ -79,114 +79,19 @@ func processWebhookEvent(event ClerkWebhookEvent) error {
 
 	switch event.Type {
 	case "user.created":
-		return handleUserCreated(event)
+		return HandleUserCreated(event)
 	case "user.updated":
-		return handleUserUpdated(event)
+		return HandleUserUpdated(event)
 	case "user.deleted":
-		return handleUserDeleted(event)
+		return HandleUserDeleted(event)
 	case "session.created":
-		return handleSessionCreated(event)
+		return HandleSessionCreated(event)
 	case "session.ended":
-		return handleSessionEnded(event)
+		return HandleSessionEnded(event)
 	case "email.created":
-		return handleEmailCreated(event)
+		return HandleEmailCreated(event)
 	default:
 		log.Printf("Unhandled webhook event type: %s", event.Type)
 		return nil
 	}
-}
-
-// handleUserCreated processes user.created webhook events
-func handleUserCreated(event ClerkWebhookEvent) error {
-	var userData UserData
-	if err := json.Unmarshal(event.Data, &userData); err != nil {
-		return err
-	}
-
-	log.Printf("User created: %s (%s)", userData.ID, userData.GetPrimaryEmail())
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Create user record in your database
-	// - Send welcome email
-	// - Initialize user preferences
-	// - Create user profile
-
-	return nil
-}
-
-// handleUserUpdated processes user.updated webhook events
-func handleUserUpdated(event ClerkWebhookEvent) error {
-	var userData UserData
-	if err := json.Unmarshal(event.Data, &userData); err != nil {
-		return err
-	}
-
-	log.Printf("User updated: %s", userData.ID)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Update user record in your database
-	// - Sync user data with other services
-	// - Update user preferences
-
-	return nil
-}
-
-// handleUserDeleted processes user.deleted webhook events
-func handleUserDeleted(event ClerkWebhookEvent) error {
-	var userData UserData
-	if err := json.Unmarshal(event.Data, &userData); err != nil {
-		return err
-	}
-
-	log.Printf("User deleted: %s", userData.ID)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Mark user as deleted in your database
-	// - Clean up user data
-	// - Cancel user subscriptions
-	// - Archive user data
-
-	return nil
-}
-
-// handleSessionCreated processes session.created webhook events
-func handleSessionCreated(event ClerkWebhookEvent) error {
-	log.Printf("Session created for event: %s", event.Type)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Log user activity
-	// - Update last login time
-	// - Track session metrics
-
-	return nil
-}
-
-// handleSessionEnded processes session.ended webhook events
-func handleSessionEnded(event ClerkWebhookEvent) error {
-	log.Printf("Session ended for event: %s", event.Type)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Log session duration
-	// - Update user activity metrics
-	// - Clean up session data
-
-	return nil
-}
-
-// handleEmailCreated processes email.created webhook events
-func handleEmailCreated(event ClerkWebhookEvent) error {
-	log.Printf("Email created for event: %s", event.Type)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Track email delivery
-	// - Update email preferences
-	// - Log email events
-
-	return nil
 }
