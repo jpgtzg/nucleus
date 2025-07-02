@@ -2,6 +2,7 @@ package stripe
 
 import (
 	"log"
+	"nucleus/clerk"
 
 	"github.com/stripe/stripe-go/v82"
 )
@@ -10,7 +11,7 @@ import (
 // It adds the subscription information to the user metadata
 func HandleSubscriptionCreated(subscription stripe.Subscription) {
 	customerId := subscription.Customer.ID
-	AddSubscriptionToUserMetadata(customerId, subscription)
+	clerk.AddSubscriptionToUserMetadata(customerId, subscription)
 	log.Printf("Subscription created for customer: %s, subscription: %s", customerId, subscription.ID)
 }
 
@@ -18,7 +19,7 @@ func HandleSubscriptionCreated(subscription stripe.Subscription) {
 // It updates the subscription information in the user metadata
 func HandleSubscriptionUpdated(subscription stripe.Subscription) {
 	customerId := subscription.Customer.ID
-	UpdateSubscriptionInUserMetadata(customerId, subscription)
+	clerk.UpdateSubscriptionInUserMetadata(customerId, subscription)
 	log.Printf("Subscription updated for customer: %s, subscription: %s", customerId, subscription.ID)
 }
 
@@ -26,6 +27,6 @@ func HandleSubscriptionUpdated(subscription stripe.Subscription) {
 // It removes the subscription from the user metadata
 func HandleSubscriptionDeleted(subscription stripe.Subscription) {
 	customerId := subscription.Customer.ID
-	RemoveSubscriptionFromUserMetadata(customerId, subscription.ID)
+	clerk.RemoveSubscriptionFromUserMetadata(customerId, subscription.ID)
 	log.Printf("Subscription deleted for customer: %s, subscription: %s", customerId, subscription.ID)
 }
