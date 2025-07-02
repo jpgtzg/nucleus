@@ -1,5 +1,7 @@
 package stripe
 
+import "nucleus/clerk"
+
 // AccessControl provides methods to check user access to products
 type AccessControl struct{}
 
@@ -11,12 +13,12 @@ func NewAccessControl() *AccessControl {
 // HasAccess checks if a user has access to a specific product
 // This is the main function you should use to check access in your application
 func (ac *AccessControl) HasAccess(customerId string, productId string) bool {
-	return HasActiveSubscription(customerId, productId)
+	return clerk.HasActiveSubscription(customerId, productId)
 }
 
 // GetUserProducts returns all products the user has active access to
 func (ac *AccessControl) GetUserProducts(customerId string) []string {
-	activeSubscriptions := GetActiveSubscriptions(customerId)
+	activeSubscriptions := clerk.GetActiveSubscriptions(customerId)
 	var products []string
 
 	for _, sub := range activeSubscriptions {
@@ -30,7 +32,7 @@ func (ac *AccessControl) GetUserProducts(customerId string) []string {
 
 // GetSubscriptionDetails returns detailed information about a user's subscription for a product
 func (ac *AccessControl) GetSubscriptionDetails(customerId string, productId string) map[string]interface{} {
-	activeSubscriptions := GetActiveSubscriptions(customerId)
+	activeSubscriptions := clerk.GetActiveSubscriptions(customerId)
 
 	for _, sub := range activeSubscriptions {
 		if sub["product_id"] == productId {

@@ -1,8 +1,7 @@
-package stripe
+package clerk
 
 import (
 	"log"
-	"nucleus/clerk"
 	"time"
 
 	"github.com/stripe/stripe-go/v82"
@@ -10,7 +9,7 @@ import (
 
 // AddSubscriptionToUserMetadata adds subscription information to user metadata
 func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscription) {
-	metadata, err := clerk.GetUserMetadata(customerId)
+	metadata, err := GetUserMetadata(customerId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -45,7 +44,7 @@ func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscr
 						subMap["cancel_at_period_end"] = subscription.CancelAtPeriodEnd
 						subMap["product_id"] = subscription.Items.Data[0].Price.Product.ID
 						subMap["price_id"] = subscription.Items.Data[0].Price.ID
-						clerk.UpdateUserMetadata(customerId, metadata)
+						UpdateUserMetadata(customerId, metadata)
 						return
 					}
 				}
@@ -61,12 +60,12 @@ func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscr
 		}
 	}
 
-	clerk.UpdateUserMetadata(customerId, metadata)
+	UpdateUserMetadata(customerId, metadata)
 }
 
 // UpdateSubscriptionInUserMetadata updates existing subscription information
 func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Subscription) {
-	metadata, err := clerk.GetUserMetadata(customerId)
+	metadata, err := GetUserMetadata(customerId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -92,7 +91,7 @@ func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Sub
 							"product_id":           subscription.Items.Data[0].Price.Product.ID,
 							"price_id":             subscription.Items.Data[0].Price.ID,
 						}
-						clerk.UpdateUserMetadata(customerId, metadata)
+						UpdateUserMetadata(customerId, metadata)
 						return
 					}
 				}
@@ -103,7 +102,7 @@ func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Sub
 
 // RemoveSubscriptionFromUserMetadata removes a subscription from user metadata
 func RemoveSubscriptionFromUserMetadata(customerId string, subscriptionId string) {
-	metadata, err := clerk.GetUserMetadata(customerId)
+	metadata, err := GetUserMetadata(customerId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -120,7 +119,7 @@ func RemoveSubscriptionFromUserMetadata(customerId string, subscriptionId string
 				}
 			}
 			stripeData["subscriptions"] = updatedSubscriptions
-			clerk.UpdateUserMetadata(customerId, metadata)
+			UpdateUserMetadata(customerId, metadata)
 		}
 	}
 }
@@ -128,7 +127,7 @@ func RemoveSubscriptionFromUserMetadata(customerId string, subscriptionId string
 // HasActiveSubscription checks if a user has an active subscription for a specific product
 // Returns true if the user has an active subscription that hasn't expired
 func HasActiveSubscription(customerId string, productId string) bool {
-	metadata, err := clerk.GetUserMetadata(customerId)
+	metadata, err := GetUserMetadata(customerId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return false
@@ -162,7 +161,7 @@ func HasActiveSubscription(customerId string, productId string) bool {
 
 // GetActiveSubscriptions returns all active subscriptions for a user
 func GetActiveSubscriptions(customerId string) []map[string]interface{} {
-	metadata, err := clerk.GetUserMetadata(customerId)
+	metadata, err := GetUserMetadata(customerId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return nil
