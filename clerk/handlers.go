@@ -57,11 +57,9 @@ func HandleOrganizationCreated(event ClerkWebhookEvent) error {
 }
 
 func HandleOrganizationUpdated(event ClerkWebhookEvent) error {
-	log.Printf("Organization updated: %+v", event)
 	return nil
 }
 
 func HandleOrganizationDeleted(event ClerkWebhookEvent) error {
-	log.Printf("Organization deleted: %+v", event)
 	return nil
 }
