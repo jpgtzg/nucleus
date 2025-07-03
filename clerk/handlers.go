@@ -7,6 +7,8 @@ import (
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/joho/godotenv"
+	"github.com/stripe/stripe-go/v82"
+	"github.com/stripe/stripe-go/v82/customer"
 )
 
 func init() {
@@ -23,97 +25,43 @@ func init() {
 	clerk.SetKey(clerkAPIKey)
 }
 
-// handleUserCreated processes user.created webhook events
-func HandleUserCreated(event ClerkWebhookEvent) error {
-	var userData clerk.User
-	if err := json.Unmarshal(event.Data, &userData); err != nil {
+func HandleOrganizationCreated(event ClerkWebhookEvent) error {
+	var organization clerk.Organization
+	err := json.Unmarshal(event.Data, &organization)
+	if err != nil {
 		return err
 	}
 
-	log.Printf("User created: %s (%s)", userData.ID, userData.EmailAddresses[0].EmailAddress)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Create user record in your database
-	// - Send welcome email
-	// - Initialize user preferences
-	// - Create user profile
-
-	return nil
-}
-
-// handleUserUpdated processes user.updated webhook events
-func HandleUserUpdated(event ClerkWebhookEvent) error {
-	var userData clerk.User
-	if err := json.Unmarshal(event.Data, &userData); err != nil {
+	// Create the single stripe customer for the organization,
+	// with the organization id in the metadata (required for bidirectional sync)
+	customer, err := customer.New(&stripe.CustomerParams{
+		Name: stripe.String(organization.Name),
+		Metadata: map[string]string{
+			"clerk_organization_id": organization.ID,
+		},
+	})
+	if err != nil {
 		return err
 	}
 
-	log.Printf("User updated: %s", userData.ID)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Update user record in your database
-	// - Sync user data with other services
-	// - Update user preferences
-
-	return nil
-}
-
-// handleUserDeleted processes user.deleted webhook events
-func HandleUserDeleted(event ClerkWebhookEvent) error {
-	var userData clerk.User
-	if err := json.Unmarshal(event.Data, &userData); err != nil {
+	// Update the organization metadata with the stripe customer id
+	// This is required for bidirectional sync
+	metadata := map[string]interface{}{
+		"stripe_customer_id": customer.ID,
+	}
+	if err := UpdateOrganizationPublicMetadata(organization.ID, metadata); err != nil {
 		return err
 	}
 
-	log.Printf("User deleted: %s", userData.ID)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Mark user as deleted in your database
-	// - Clean up user data
-	// - Cancel user subscriptions
-	// - Archive user data
-
 	return nil
 }
 
-// handleSessionCreated processes session.created webhook events
-func HandleSessionCreated(event ClerkWebhookEvent) error {
-	log.Printf("Session created for event: %s", event.Type)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Log user activity
-	// - Update last login time
-	// - Track session metrics
-
+func HandleOrganizationUpdated(event ClerkWebhookEvent) error {
+	log.Printf("Organization updated: %+v", event)
 	return nil
 }
 
-// handleSessionEnded processes session.ended webhook events
-func HandleSessionEnded(event ClerkWebhookEvent) error {
-	log.Printf("Session ended for event: %s", event.Type)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Log session duration
-	// - Update user activity metrics
-	// - Clean up session data
-
-	return nil
-}
-
-// handleEmailCreated processes email.created webhook events
-func HandleEmailCreated(event ClerkWebhookEvent) error {
-	log.Printf("Email created for event: %s", event.Type)
-
-	// TODO: Add your business logic here
-	// Examples:
-	// - Track email delivery
-	// - Update email preferences
-	// - Log email events
-
+func HandleOrganizationDeleted(event ClerkWebhookEvent) error {
+	log.Printf("Organization deleted: %+v", event)
 	return nil
 }
