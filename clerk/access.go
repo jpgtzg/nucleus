@@ -1,28 +1,6 @@
 // TODO THIS FILE IS NOT IMPLEMENTED YET
 package clerk
 
-import (
-	"log"
-	"os"
-
-	"github.com/clerk/clerk-sdk-go/v2"
-	"github.com/joho/godotenv"
-)
-
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Warning: .env file not found, using system environment variables")
-	}
-
-	clerkAPIKey := os.Getenv("CLERK_SECRET_KEY")
-	if clerkAPIKey == "" {
-		log.Fatal("CLERK_SECRET_KEY environment variable is required")
-	}
-
-	clerk.SetKey(clerkAPIKey)
-}
-
 // AccessControl provides methods to check user access to products
 type AccessControl struct{}
 
