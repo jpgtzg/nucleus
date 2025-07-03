@@ -6,33 +6,12 @@ package clerk
 import (
 	"context"
 	"encoding/json"
-	"log"
-	"os"
 
-	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/clerk/clerk-sdk-go/v2/user"
-	"github.com/joho/godotenv"
 )
 
-var globalCtx context.Context
-
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Warning: .env file not found, using system environment variables")
-	}
-
-	globalCtx = context.Background()
-	clerkAPIKey := os.Getenv("CLERK_SECRET_KEY")
-	if clerkAPIKey == "" {
-		log.Fatal("CLERK_SECRET_KEY environment variable is required")
-	}
-
-	clerk.SetKey(clerkAPIKey)
-}
-
 func GetUserMetadata(userId string) (map[string]interface{}, error) {
-	user, err := user.Get(globalCtx, userId)
+	user, err := user.Get(context.Background(), userId)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +31,7 @@ func UpdateUserMetadata(userId string, metadata map[string]interface{}) error {
 	}
 
 	rawMessage := json.RawMessage(jsonData)
-	_, err = user.Update(globalCtx, userId, &user.UpdateParams{
+	_, err = user.Update(context.Background(), userId, &user.UpdateParams{
 		PublicMetadata: &rawMessage,
 	})
 	return err
