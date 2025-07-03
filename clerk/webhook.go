@@ -64,18 +64,12 @@ func processWebhookEvent(event ClerkWebhookEvent) error {
 	log.Printf("Processing webhook event: %s", event.Type)
 
 	switch event.Type {
-	case "user.created":
-		return HandleUserCreated(event)
-	case "user.updated":
-		return HandleUserUpdated(event)
-	case "user.deleted":
-		return HandleUserDeleted(event)
-	case "session.created":
-		return HandleSessionCreated(event)
-	case "session.ended":
-		return HandleSessionEnded(event)
-	case "email.created":
-		return HandleEmailCreated(event)
+	case "organization.created":
+		return HandleOrganizationCreated(event)
+	case "organization.updated":
+		return HandleOrganizationUpdated(event)
+	case "organization.deleted":
+		return HandleOrganizationDeleted(event)
 	default:
 		log.Printf("Unhandled webhook event type: %s", event.Type)
 		return nil
