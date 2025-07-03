@@ -8,7 +8,7 @@ import (
 )
 
 // HandleSubscriptionCreated handles the subscription created event
-// It adds the subscription information to the user metadata
+// It adds the subscription information to the organization metadata
 func HandleSubscriptionCreated(subscription stripe.Subscription) {
 	customerId := subscription.Customer.ID
 	clerk.AddSubscriptionToOrganizationMetadata(customerId, subscription)
@@ -16,7 +16,7 @@ func HandleSubscriptionCreated(subscription stripe.Subscription) {
 }
 
 // HandleSubscriptionUpdated handles the subscription updated event
-// It updates the subscription information in the user metadata
+// It updates the subscription information in the organization metadata
 func HandleSubscriptionUpdated(subscription stripe.Subscription) {
 	customerId := subscription.Customer.ID
 	clerk.UpdateSubscriptionInOrganizationMetadata(customerId, subscription)
@@ -24,7 +24,7 @@ func HandleSubscriptionUpdated(subscription stripe.Subscription) {
 }
 
 // HandleSubscriptionDeleted handles the subscription deleted event
-// It removes the subscription from the user metadata
+// It removes the subscription from the organization metadata
 func HandleSubscriptionDeleted(subscription stripe.Subscription) {
 	customerId := subscription.Customer.ID
 	clerk.RemoveSubscriptionFromOrganizationMetadata(customerId, subscription.ID)
