@@ -26,6 +26,14 @@ func GetUserOrganizations(userId string) (*clerk.OrganizationMembershipList, err
 	return orgMemberships, nil
 }
 
+func GetUserOrganizationId(userId string) (string, error) {
+	orgMemberships, err := GetUserOrganizations(userId)
+	if err != nil {
+		return "", err
+	}
+	return orgMemberships.OrganizationMemberships[0].Organization.ID, nil
+}
+
 func GetOrganizationMetadata(organizationId string) (map[string]interface{}, error) {
 	organization, err := organization.Get(context.Background(), organizationId)
 	if err != nil {
