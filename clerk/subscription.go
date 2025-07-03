@@ -5,13 +5,20 @@ import (
 	"time"
 
 	"github.com/stripe/stripe-go/v82"
+	"github.com/stripe/stripe-go/v82/customer"
 )
 
 // AddSubscriptionToOrganizationMetadata adds subscription information to user metadata
 func AddSubscriptionToOrganizationMetadata(customerId string, subscription stripe.Subscription) {
-	organizationId, err := GetUserOrganizationId(customerId)
+	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
 	if err != nil {
-		log.Printf("Error getting user organization id: %v", err)
+		log.Printf("Error getting stripe customer: %v", err)
+		return
+	}
+
+	organizationId := stripeCustomer.Metadata["clerk_organization_id"]
+	if organizationId == "" {
+		log.Printf("Stripe customer %s has no clerk organization id", customerId)
 		return
 	}
 
@@ -69,9 +76,15 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription strip
 
 // UpdateSubscriptionInOrganizationMetadata updates existing subscription information
 func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription stripe.Subscription) {
-	organizationId, err := GetUserOrganizationId(customerId)
+	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
 	if err != nil {
-		log.Printf("Error getting user organization id: %v", err)
+		log.Printf("Error getting stripe customer: %v", err)
+		return
+	}
+
+	organizationId := stripeCustomer.Metadata["clerk_organization_id"]
+	if organizationId == "" {
+		log.Printf("Stripe customer %s has no clerk organization id", customerId)
 		return
 	}
 
@@ -111,9 +124,15 @@ func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription st
 
 // RemoveSubscriptionFromOrganizationMetadata removes a subscription from user metadata
 func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionId string) {
-	organizationId, err := GetUserOrganizationId(customerId)
+	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
 	if err != nil {
-		log.Printf("Error getting user organization id: %v", err)
+		log.Printf("Error getting stripe customer: %v", err)
+		return
+	}
+
+	organizationId := stripeCustomer.Metadata["clerk_organization_id"]
+	if organizationId == "" {
+		log.Printf("Stripe customer %s has no clerk organization id", customerId)
 		return
 	}
 
