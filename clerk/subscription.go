@@ -7,9 +7,15 @@ import (
 	"github.com/stripe/stripe-go/v82"
 )
 
-// AddSubscriptionToUserMetadata adds subscription information to user metadata
-func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscription) {
-	metadata, err := GetUserMetadata(customerId)
+// AddSubscriptionToOrganizationMetadata adds subscription information to user metadata
+func AddSubscriptionToOrganizationMetadata(customerId string, subscription stripe.Subscription) {
+	organizationId, err := GetUserOrganizationId(customerId)
+	if err != nil {
+		log.Printf("Error getting user organization id: %v", err)
+		return
+	}
+
+	metadata, err := GetOrganizationMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -42,7 +48,7 @@ func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscr
 						subMap["current_period_end"] = currentPeriodEnd
 						subMap["product_id"] = subscription.Items.Data[0].Price.Product.ID
 						subMap["price_id"] = subscription.Items.Data[0].Price.ID
-						UpdateUserMetadata(customerId, metadata)
+						UpdateOrganizationMetadata(organizationId, metadata)
 						return
 					}
 				}
@@ -58,12 +64,18 @@ func AddSubscriptionToUserMetadata(customerId string, subscription stripe.Subscr
 		}
 	}
 
-	UpdateUserMetadata(customerId, metadata)
+	UpdateOrganizationMetadata(organizationId, metadata)
 }
 
-// UpdateSubscriptionInUserMetadata updates existing subscription information
-func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Subscription) {
-	metadata, err := GetUserMetadata(customerId)
+// UpdateSubscriptionInOrganizationMetadata updates existing subscription information
+func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription stripe.Subscription) {
+	organizationId, err := GetUserOrganizationId(customerId)
+	if err != nil {
+		log.Printf("Error getting user organization id: %v", err)
+		return
+	}
+
+	metadata, err := GetOrganizationMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -88,7 +100,7 @@ func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Sub
 							"product_id":         subscription.Items.Data[0].Price.Product.ID,
 							"price_id":           subscription.Items.Data[0].Price.ID,
 						}
-						UpdateUserMetadata(customerId, metadata)
+						UpdateOrganizationMetadata(organizationId, metadata)
 						return
 					}
 				}
@@ -97,9 +109,15 @@ func UpdateSubscriptionInUserMetadata(customerId string, subscription stripe.Sub
 	}
 }
 
-// RemoveSubscriptionFromUserMetadata removes a subscription from user metadata
-func RemoveSubscriptionFromUserMetadata(customerId string, subscriptionId string) {
-	metadata, err := GetUserMetadata(customerId)
+// RemoveSubscriptionFromOrganizationMetadata removes a subscription from user metadata
+func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionId string) {
+	organizationId, err := GetUserOrganizationId(customerId)
+	if err != nil {
+		log.Printf("Error getting user organization id: %v", err)
+		return
+	}
+
+	metadata, err := GetOrganizationMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -116,15 +134,21 @@ func RemoveSubscriptionFromUserMetadata(customerId string, subscriptionId string
 				}
 			}
 			stripeData["subscriptions"] = updatedSubscriptions
-			UpdateUserMetadata(customerId, metadata)
+			UpdateOrganizationMetadata(organizationId, metadata)
 		}
 	}
 }
 
-// HasActiveSubscription checks if a user has an active subscription for a specific product
-// Returns true if the user has an active subscription that hasn't expired
+// HasActiveSubscription checks if a organization has an active subscription for a specific product
+// Returns true if the organization has an active subscription that hasn't expired
 func HasActiveSubscription(customerId string, productId string) bool {
-	metadata, err := GetUserMetadata(customerId)
+	organizationId, err := GetUserOrganizationId(customerId)
+	if err != nil {
+		log.Printf("Error getting user organization id: %v", err)
+		return false
+	}
+
+	metadata, err := GetOrganizationMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return false
@@ -156,9 +180,15 @@ func HasActiveSubscription(customerId string, productId string) bool {
 	return false
 }
 
-// GetActiveSubscriptions returns all active subscriptions for a user
+// GetActiveSubscriptions returns all active subscriptions for a organization
 func GetActiveSubscriptions(customerId string) []map[string]interface{} {
-	metadata, err := GetUserMetadata(customerId)
+	organizationId, err := GetUserOrganizationId(customerId)
+	if err != nil {
+		log.Printf("Error getting user organization id: %v", err)
+		return nil
+	}
+
+	metadata, err := GetOrganizationMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return nil
