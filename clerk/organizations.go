@@ -34,7 +34,7 @@ func GetUserOrganizationId(userId string) (string, error) {
 	return orgMemberships.OrganizationMemberships[0].Organization.ID, nil
 }
 
-func GetOrganizationMetadata(organizationId string) (map[string]interface{}, error) {
+func GetOrganizationPublicMetadata(organizationId string) (map[string]interface{}, error) {
 	organization, err := organization.Get(context.Background(), organizationId)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func GetOrganizationMetadata(organizationId string) (map[string]interface{}, err
 	return metadata, nil
 }
 
-func UpdateOrganizationMetadata(organizationId string, metadata map[string]interface{}) error {
+func UpdateOrganizationPublicMetadata(organizationId string, metadata map[string]interface{}) error {
 	jsonData, err := json.Marshal(metadata)
 	if err != nil {
 		return err

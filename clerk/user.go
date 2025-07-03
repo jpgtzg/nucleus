@@ -7,7 +7,7 @@ import (
 	"github.com/clerk/clerk-sdk-go/v2/user"
 )
 
-func GetUserMetadata(userId string) (map[string]interface{}, error) {
+func GetUserPublicMetadata(userId string) (map[string]interface{}, error) {
 	user, err := user.Get(context.Background(), userId)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func GetUserMetadata(userId string) (map[string]interface{}, error) {
 	return metadata, nil
 }
 
-func UpdateUserMetadata(userId string, metadata map[string]interface{}) error {
+func UpdateUserPublicMeadata(userId string, metadata map[string]interface{}) error {
 	jsonData, err := json.Marshal(metadata)
 	if err != nil {
 		return err
