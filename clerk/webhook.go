@@ -14,7 +14,6 @@ import (
 )
 
 type ClerkWebhookEvent = clerk.ClerkWebhookEvent
-type UserData = clerk.UserData
 
 var wh *svix.Webhook
 

@@ -3,16 +3,18 @@ package clerk
 import (
 	"encoding/json"
 	"log"
+
+	"github.com/clerk/clerk-sdk-go/v2"
 )
 
 // handleUserCreated processes user.created webhook events
 func HandleUserCreated(event ClerkWebhookEvent) error {
-	var userData UserData
+	var userData clerk.User
 	if err := json.Unmarshal(event.Data, &userData); err != nil {
 		return err
 	}
 
-	log.Printf("User created: %s (%s)", userData.ID, userData.GetPrimaryEmail())
+	log.Printf("User created: %s (%s)", userData.ID, userData.EmailAddresses[0].EmailAddress)
 
 	// TODO: Add your business logic here
 	// Examples:
@@ -26,7 +28,7 @@ func HandleUserCreated(event ClerkWebhookEvent) error {
 
 // handleUserUpdated processes user.updated webhook events
 func HandleUserUpdated(event ClerkWebhookEvent) error {
-	var userData UserData
+	var userData clerk.User
 	if err := json.Unmarshal(event.Data, &userData); err != nil {
 		return err
 	}
@@ -44,7 +46,7 @@ func HandleUserUpdated(event ClerkWebhookEvent) error {
 
 // handleUserDeleted processes user.deleted webhook events
 func HandleUserDeleted(event ClerkWebhookEvent) error {
-	var userData UserData
+	var userData clerk.User
 	if err := json.Unmarshal(event.Data, &userData); err != nil {
 		return err
 	}
