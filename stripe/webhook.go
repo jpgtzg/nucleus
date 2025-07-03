@@ -58,6 +58,7 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 // It handles subscription and invoice events
 // It logs the event type if it's not handled
 func processWebhookEvent(event stripe.Event) {
+	log.Printf("[STRIPE] Processing webhook event: %s", event.Type)
 
 	switch event.Type {
 	case "customer.subscription.created":
