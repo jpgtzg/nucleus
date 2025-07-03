@@ -22,7 +22,7 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription strip
 		return
 	}
 
-	metadata, err := GetOrganizationMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -55,7 +55,7 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription strip
 						subMap["current_period_end"] = currentPeriodEnd
 						subMap["product_id"] = subscription.Items.Data[0].Price.Product.ID
 						subMap["price_id"] = subscription.Items.Data[0].Price.ID
-						UpdateOrganizationMetadata(organizationId, metadata)
+						UpdateOrganizationPublicMetadata(organizationId, metadata)
 						return
 					}
 				}
@@ -71,7 +71,7 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription strip
 		}
 	}
 
-	UpdateOrganizationMetadata(organizationId, metadata)
+	UpdateOrganizationPublicMetadata(organizationId, metadata)
 }
 
 // UpdateSubscriptionInOrganizationMetadata updates existing subscription information
@@ -88,7 +88,7 @@ func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription st
 		return
 	}
 
-	metadata, err := GetOrganizationMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -113,7 +113,7 @@ func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription st
 							"product_id":         subscription.Items.Data[0].Price.Product.ID,
 							"price_id":           subscription.Items.Data[0].Price.ID,
 						}
-						UpdateOrganizationMetadata(organizationId, metadata)
+						UpdateOrganizationPublicMetadata(organizationId, metadata)
 						return
 					}
 				}
@@ -136,7 +136,7 @@ func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionI
 		return
 	}
 
-	metadata, err := GetOrganizationMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -153,7 +153,7 @@ func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionI
 				}
 			}
 			stripeData["subscriptions"] = updatedSubscriptions
-			UpdateOrganizationMetadata(organizationId, metadata)
+			UpdateOrganizationPublicMetadata(organizationId, metadata)
 		}
 	}
 }
@@ -167,7 +167,7 @@ func HasActiveSubscription(customerId string, productId string) bool {
 		return false
 	}
 
-	metadata, err := GetOrganizationMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return false
@@ -207,7 +207,7 @@ func GetActiveSubscriptions(customerId string) []map[string]interface{} {
 		return nil
 	}
 
-	metadata, err := GetOrganizationMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organizationId)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return nil
