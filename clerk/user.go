@@ -1,6 +1,3 @@
-// Package clerk is a wrapper for the Clerk API
-// It provides functions to get and update user metadata
-
 package clerk
 
 import (
