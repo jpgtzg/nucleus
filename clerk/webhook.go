@@ -56,11 +56,11 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	go processWebhookEvent(event)
+	go processWebhookEvent(&event)
 }
 
 // ProcessWebhook is a function that processes the webhook from Clerk
-func processWebhookEvent(event ClerkWebhookEvent) error {
+func processWebhookEvent(event *ClerkWebhookEvent) error {
 	log.Printf("[CLERK] Processing webhook event: %s", event.Type)
 
 	switch event.Type {

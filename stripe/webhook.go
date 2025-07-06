@@ -51,18 +51,18 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	go processWebhookEvent(event)
+	go processWebhookEvent(&event)
 }
 
 // processWebhookEvent processes the webhook event asynchronously
 // It handles subscription and invoice events
 // It logs the event type if it's not handled
-func processWebhookEvent(event stripe.Event) {
+func processWebhookEvent(event *stripe.Event) {
 	log.Printf("[STRIPE] Processing webhook event: %s", event.Type)
+	var subscription stripe.Subscription
 
 	switch event.Type {
 	case "customer.subscription.created":
-		var subscription stripe.Subscription
 		jsonData, err := json.Marshal(event.Data.Object)
 		if err != nil {
 			log.Printf("Error marshaling webhook data: %v", err)
@@ -74,10 +74,9 @@ func processWebhookEvent(event stripe.Event) {
 			log.Printf("Error parsing webhook JSON: %v", err)
 			return
 		}
-		HandleSubscriptionCreated(subscription)
+		HandleSubscriptionCreated(&subscription)
 
 	case "customer.subscription.updated":
-		var subscription stripe.Subscription
 		jsonData, err := json.Marshal(event.Data.Object)
 		if err != nil {
 			log.Printf("Error marshaling webhook data: %v", err)
@@ -89,10 +88,9 @@ func processWebhookEvent(event stripe.Event) {
 			log.Printf("Error parsing webhook JSON: %v", err)
 			return
 		}
-		HandleSubscriptionUpdated(subscription)
+		HandleSubscriptionUpdated(&subscription)
 
 	case "customer.subscription.deleted":
-		var subscription stripe.Subscription
 		jsonData, err := json.Marshal(event.Data.Object)
 		if err != nil {
 			log.Printf("Error marshaling webhook data: %v", err)
@@ -104,7 +102,7 @@ func processWebhookEvent(event stripe.Event) {
 			log.Printf("Error parsing webhook JSON: %v", err)
 			return
 		}
-		HandleSubscriptionDeleted(subscription)
+		HandleSubscriptionDeleted(&subscription)
 
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)

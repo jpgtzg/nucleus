@@ -25,7 +25,7 @@ func init() {
 	clerk.SetKey(clerkAPIKey)
 }
 
-func HandleOrganizationCreated(event ClerkWebhookEvent) error {
+func HandleOrganizationCreated(event *ClerkWebhookEvent) error {
 	var organization clerk.Organization
 	err := json.Unmarshal(event.Data, &organization)
 	if err != nil {
@@ -56,10 +56,10 @@ func HandleOrganizationCreated(event ClerkWebhookEvent) error {
 	return nil
 }
 
-func HandleOrganizationUpdated(event ClerkWebhookEvent) error {
+func HandleOrganizationUpdated(event *ClerkWebhookEvent) error {
 	return nil
 }
 
-func HandleOrganizationDeleted(event ClerkWebhookEvent) error {
+func HandleOrganizationDeleted(event *ClerkWebhookEvent) error {
 	return nil
 }

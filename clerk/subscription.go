@@ -9,7 +9,7 @@ import (
 )
 
 // AddSubscriptionToOrganizationMetadata adds subscription information to user metadata
-func AddSubscriptionToOrganizationMetadata(customerId string, subscription stripe.Subscription) {
+func AddSubscriptionToOrganizationMetadata(customerId string, subscription *stripe.Subscription) {
 	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
 	if err != nil {
 		log.Printf("Error getting stripe customer: %v", err)
@@ -75,7 +75,7 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription strip
 }
 
 // UpdateSubscriptionInOrganizationMetadata updates existing subscription information
-func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription stripe.Subscription) {
+func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription *stripe.Subscription) {
 	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
 	if err != nil {
 		log.Printf("Error getting stripe customer: %v", err)
