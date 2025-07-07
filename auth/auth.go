@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -22,6 +23,7 @@ func GetUserID(r *http.Request) (string, bool) {
 // VerifyingMiddleware is the general middleware that verifies the passed JWT Token from clerk and extracts the user ID to pass it to the next handler
 func VerifyingMiddleware(next http.Handler) http.Handler {
 	return clerkhttp.RequireHeaderAuthorization()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[API] Verifying middleware")
 		userID, err := extractUserIDFromAuthHeader(r)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
