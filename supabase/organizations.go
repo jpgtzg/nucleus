@@ -35,3 +35,45 @@ func GetAllOrganizations() ([]Organization, error) {
 
 	return organizations, nil
 }
+
+func GetOrganizationByClerkID(clerkID string) (Organization, error) {
+	data, _, err := client.From("organizations").Select("*", "exact", false).Eq("clerk_organization_id", clerkID).Execute()
+	if err != nil {
+		return Organization{}, err
+	}
+
+	var organization Organization
+	if err := json.Unmarshal(data, &organization); err != nil {
+		return Organization{}, err
+	}
+
+	return organization, nil
+}
+
+func GetOrganizationByStripeCustomerID(stripeCustomerID string) (Organization, error) {
+	data, _, err := client.From("organizations").Select("*", "exact", false).Eq("stripe_customer_id", stripeCustomerID).Execute()
+	if err != nil {
+		return Organization{}, err
+	}
+
+	var organization Organization
+	if err := json.Unmarshal(data, &organization); err != nil {
+		return Organization{}, err
+	}
+
+	return organization, nil
+}
+
+func CreateOrganization(clerkID string, stripeCustomerID string) error {
+	organization := Organization{
+		ClerkID:          clerkID,
+		StripeCustomerID: stripeCustomerID,
+	}
+
+	_, _, err := client.From("organizations").Insert(organization, false, "", "", "").Execute()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
