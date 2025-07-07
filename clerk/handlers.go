@@ -3,6 +3,7 @@ package clerk
 import (
 	"encoding/json"
 	"log"
+	"nucleus/supabase"
 	"os"
 
 	"github.com/clerk/clerk-sdk-go/v2"
@@ -32,24 +33,15 @@ func HandleOrganizationCreated(event *ClerkWebhookEvent) error {
 		return err
 	}
 
-	// Create the single stripe customer for the organization,
-	// with the organization id in the metadata (required for bidirectional sync)
 	customer, err := customer.New(&stripe.CustomerParams{
 		Name: stripe.String(organization.Name),
-		Metadata: map[string]string{
-			"clerk_organization_id": organization.ID,
-		},
 	})
 	if err != nil {
 		return err
 	}
 
-	// Update the organization metadata with the stripe customer id
-	// This is required for bidirectional sync
-	metadata := map[string]interface{}{
-		"stripe_customer_id": customer.ID,
-	}
-	if err := UpdateOrganizationPublicMetadata(organization.ID, metadata); err != nil {
+	err = supabase.CreateOrganization(organization.ID, customer.ID)
+	if err != nil {
 		return err
 	}
 
@@ -61,5 +53,27 @@ func HandleOrganizationUpdated(event *ClerkWebhookEvent) error {
 }
 
 func HandleOrganizationDeleted(event *ClerkWebhookEvent) error {
+	var eventData map[string]interface{}
+	err := json.Unmarshal(event.Data, &eventData)
+	if err != nil {
+		return err
+	}
+
+	organizationId, ok := eventData["id"].(string)
+	if !ok {
+		return err
+	}
+
+	organization, err := supabase.GetOrganizationByClerkID(organizationId)
+	if err != nil {
+		supabase.DebugOrganizations()
+		return err
+	}
+
+	_, err = customer.Del(organization.StripeCustomerID, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
