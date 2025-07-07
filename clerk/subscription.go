@@ -140,47 +140,6 @@ func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionI
 	}
 }
 
-// HasActiveSubscription checks if a organization has an active subscription for a specific product
-// Returns true if the organization has an active subscription that hasn't expired
-func HasActiveSubscription(customerId string, productId string) bool {
-	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
-	if err != nil {
-		log.Printf("Error getting organization: %v", err)
-		return false
-	}
-
-	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
-	if err != nil {
-		log.Printf("Error getting user metadata: %v", err)
-		return false
-	}
-
-	if stripeData, ok := metadata["stripe"].(map[string]interface{}); ok {
-		if subscriptions, ok := stripeData["subscriptions"].([]interface{}); ok {
-			currentTime := time.Now().Unix()
-
-			for _, sub := range subscriptions {
-				if subMap, ok := sub.(map[string]interface{}); ok {
-					// Check if this subscription is for the requested product
-					if subMap["product_id"] == productId {
-						// Check if subscription is active
-						if status, ok := subMap["status"].(string); ok && status == "active" {
-							// Check if subscription hasn't expired
-							if periodEnd, ok := subMap["current_period_end"].(float64); ok {
-								if int64(periodEnd) > currentTime {
-									return true
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return false
-}
-
 // GetActiveSubscriptionsByCustomerID returns all active subscriptions for a organization
 func GetActiveSubscriptionsByCustomerID(customerId string) []map[string]interface{} {
 	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
