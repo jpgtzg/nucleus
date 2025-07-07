@@ -1,19 +1,34 @@
 # Nucleus
 
-Nucleus is the central control service of the platform. It synchronizes billing data from Stripe with user identity data from Clerk, manages user metadata, and determines which AI agents each user has access to. Acting as the source of truth, Nucleus ensures all user entitlements, usage limits, and service-level permissions are consistently maintained and distributed across the system.
+Nucleus is the central control service of the platform that synchronizes billing data from Stripe with user identity data from Clerk, manages organization metadata, and provides subscription-based access control. Acting as the source of truth, Nucleus ensures all user entitlements, usage limits, and service-level permissions are consistently maintained and distributed across the system.
 
 ## Features
 
-- **Stripe Webhook Handler**: Processes Stripe webhook events for payment processing
-- **Invoice Payment Processing**: Handles successful invoice payments and updates user product access
-- **Product Access Management**: Automatically adds purchased product IDs to user metadata
-- **Secure Webhook Verification**: Validates webhook signatures and IP addresses to ensure requests come from Stripe
+- **Stripe Webhook Handler**: Processes Stripe webhook events for subscription management
+- **Clerk Webhook Handler**: Processes Clerk webhook events for organization lifecycle management
+- **Organization Management**: Automatic creation and deletion of Stripe customers when organizations are created/deleted in Clerk
+- **Subscription-Based Access Control**: Comprehensive subscription tracking and management
+- **JWT Authentication**: Secure middleware for verifying Clerk JWT tokens
 - **Dynamic IP Validation**: Fetches current Stripe webhook IPs dynamically for enhanced security
-- **Event Deduplication**: In-memory cache system prevents duplicate webhook processing with automatic cleanup
-- **Clerk User Management**: Full CRUD operations for user identity management
-- **Environment-based Configuration**: Uses environment variables for secure configuration management
+- **Supabase Integration**: Persistent storage for organization-customer mappings
 - **Asynchronous Processing**: Webhook events are processed asynchronously for better performance
 - **Docker Support**: Containerized deployment with optimized build process
+
+## Architecture
+
+Nucleus acts as a bridge between three key services:
+
+1. **Clerk**: User identity and organization management
+2. **Stripe**: Payment processing and subscription management  
+3. **Supabase**: Persistent storage for organization-customer mappings
+
+### Data Flow
+
+```
+Clerk Organization Created → Nucleus → Create Stripe Customer → Store in Supabase
+Stripe Subscription Event → Nucleus → Update Organization Metadata in Clerk
+User Request → Nucleus (JWT Auth) → Return User's Active Subscriptions
+```
 
 ## Prerequisites
 
@@ -21,6 +36,7 @@ Nucleus is the central control service of the platform. It synchronizes billing 
 - Docker (for containerized deployment)
 - Stripe account with webhook endpoint configured
 - Clerk account for user identity management
+- Supabase project for data persistence
 
 ## Installation
 
@@ -41,8 +57,11 @@ go mod download
 ```env
 STRIPE_KEY=sk_test_your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-PORT=8080
 CLERK_SECRET_KEY=your_clerk_secret_key
+CLERK_WEBHOOK_SECRET=whsec_your_clerk_webhook_secret
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_supabase_anon_key
+PORT=8080
 ```
 
 ### Docker Deployment
@@ -73,19 +92,36 @@ The server will start listening on port 8080 and be accessible at `http://localh
 
 1. Go to your Stripe Dashboard
 2. Navigate to Developers > Webhooks
-3. Create a new webhook endpoint with your server URL (e.g., `https://yourdomain.com/webhook`)
+3. Create a new webhook endpoint with your server URL (e.g., `https://yourdomain.com/stripe/webhook`)
 4. Select the following events to listen for:
    - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
-   - `invoice.paid`
 5. Copy the webhook signing secret and add it to your `.env` file
 
-### Clerk Setup
+### Clerk Webhook Setup
 
 1. Go to your Clerk Dashboard
-2. Navigate to API Keys
-3. Copy your Secret Key and add it to your `.env` file
+2. Navigate to Webhooks
+3. Create a new webhook endpoint with your server URL (e.g., `https://yourdomain.com/clerk/webhook`)
+4. Select the following events to listen for:
+   - `organization.created`
+   - `organization.updated`
+   - `organization.deleted`
+5. Copy the webhook signing secret and add it to your `.env` file
+
+### Supabase Setup
+
+1. Create a new Supabase project
+2. Create a table named `organizations` with the following schema:
+```sql
+CREATE TABLE organizations (
+  id SERIAL PRIMARY KEY,
+  clerk_organization_id TEXT UNIQUE NOT NULL,
+  stripe_customer_id TEXT UNIQUE NOT NULL
+);
+```
+3. Copy your Supabase URL and anon key to your `.env` file
 
 ## Usage
 
@@ -124,24 +160,25 @@ The application supports both local `.env` files and Docker environment variable
 - **Docker**: Uses `--env-file .env` to pass environment variables to the container
 - **Fallback**: If `.env` file is not found, the application uses system environment variables
 
-### Webhook Endpoints
+## API Endpoints
 
-#### POST `/webhook`
+### Stripe Webhook
+
+#### POST `/stripe/webhook`
 
 Handles incoming Stripe webhook events.
 
 **Supported Events:**
-- `customer.subscription.created`: Triggered when a new subscription is created, adds subscription details to user metadata
-- `customer.subscription.updated`: Triggered when a subscription is updated (status changes, billing updates, etc.)
-- `customer.subscription.deleted`: Triggered when a subscription is canceled or deleted, removes subscription from user metadata
-- `invoice.paid`: Triggered when an invoice is successfully paid, maintains backward compatibility with product ID tracking
+- `customer.subscription.created`: Creates new subscription in organization metadata
+- `customer.subscription.updated`: Updates existing subscription information
+- `customer.subscription.deleted`: Removes subscription from organization metadata
 
 **Security Features:**
 - Request body size limit: 64KB
-- Webhook signature verification
+- Webhook signature verification using Stripe SDK
 - Dynamic IP address validation against Stripe's current webhook IP list
 - JSON payload validation
-- Event deduplication with 30-second TTL and automatic cleanup
+- Asynchronous event processing
 
 **Response Codes:**
 - `200 OK`: Event processed successfully
@@ -149,52 +186,70 @@ Handles incoming Stripe webhook events.
 - `403 Forbidden`: Request from non-Stripe IP address
 - `503 Service Unavailable`: Error reading request body
 
-### Product Access Management
+### Clerk Webhook
 
-When an invoice is paid, the service automatically:
+#### POST `/clerk/webhook`
 
-1. Extracts the product ID from the invoice line items
-2. Retrieves the current user metadata from Clerk
-3. Adds the product ID to the user's `stripe.products_id` array in metadata
-4. Updates the user's metadata in Clerk
+Handles incoming Clerk webhook events.
 
-This ensures users have immediate access to purchased products across the platform.
+**Supported Events:**
+- `organization.created`: Creates new Stripe customer and stores mapping in Supabase
+- `organization.updated`: Handles organization updates (currently no-op)
+- `organization.deleted`: Deletes Stripe customer and removes mapping from Supabase
 
-### Subscription-Based Access Control
+**Security Features:**
+- Webhook signature verification using Svix
+- JSON payload validation
+- Asynchronous event processing
 
-The service now provides comprehensive subscription management and access control:
+**Response Codes:**
+- `200 OK`: Event processed successfully
+- `400 Bad Request`: Malformed JSON or invalid webhook
+- `401 Unauthorized`: Invalid webhook signature
+- `405 Method Not Allowed`: Non-POST requests
 
-#### Subscription Tracking
-- **Automatic Updates**: Subscription status is automatically updated via webhook events
-- **Expiration Tracking**: Current period end dates are tracked for each subscription
-- **Status Management**: Handles active, canceled, past due, and other subscription states
-- **Multi-Product Support**: Users can have multiple active subscriptions for different products
+### User API
 
-#### Access Control API
-The service provides helper functions for checking user access:
+#### GET `/user/subscriptions`
 
-```go
-// Initialize access control
-ac := stripe.NewAccessControl()
+Returns the active subscriptions for the authenticated user's organization.
 
-// Check if user has access to a specific product
-hasAccess := ac.HasAccess("cus_123", "prod_premium")
+**Authentication:**
+- Requires valid Clerk JWT token in Authorization header
+- Format: `Bearer <token>`
 
-// Get all products user has access to
-products := ac.GetUserProducts("cus_123")
-
-// Check feature access
-canUseFeature := ac.CheckFeatureAccess("cus_123", "premium_chat")
-
-// Get user's subscription tier
-tier := ac.GetUserTier("cus_123")
-
-// Check if subscription is expiring soon
-expiringSoon := ac.IsSubscriptionExpiringSoon("cus_123", "prod_premium", 7)
+**Response:**
+```json
+[
+  {
+    "id": "sub_123",
+    "status": "active",
+    "current_period_end": 1753903901,
+    "product_id": "prod_premium",
+    "price_id": "price_123"
+  }
+]
 ```
 
-#### Metadata Structure
-User metadata now includes comprehensive subscription information:
+**Response Codes:**
+- `200 OK`: Subscriptions returned successfully
+- `401 Unauthorized`: Invalid or missing JWT token
+- `500 Internal Server Error`: Error retrieving user data
+
+## Organization Management
+
+### Automatic Customer Creation
+
+When a new organization is created in Clerk:
+
+1. Nucleus receives the `organization.created` webhook
+2. Creates a new Stripe customer with the organization name
+3. Stores the mapping between Clerk organization ID and Stripe customer ID in Supabase
+4. This mapping enables subscription events to be properly routed to the correct organization
+
+### Subscription Metadata Structure
+
+Organization metadata in Clerk includes comprehensive subscription information:
 
 ```json
 {
@@ -204,25 +259,63 @@ User metadata now includes comprehensive subscription information:
         "id": "sub_123",
         "status": "active",
         "current_period_end": 1753903901,
-        "cancel_at_period_end": false,
         "product_id": "prod_premium",
         "price_id": "price_123"
       }
-    ],
-    "products_id": ["prod_premium"] // Legacy support
+    ]
   }
 }
 ```
 
-#### Migration from Product IDs
-The system maintains backward compatibility with the existing `products_id` array while providing the new subscription-based access control. You can gradually migrate your application to use the new access control methods.
+### Access Control Functions
 
-### Clerk User Management
+The service provides helper functions for checking organization access:
 
-The service includes full user management capabilities through Clerk:
+```go
+// Get active subscriptions for an organization
+subscriptions := clerk.GetActiveSubscriptionsByOrganizationID(organizationID)
 
-- **Get User Metadata**: `clerk.GetUserMetadata(userId)`
-- **Update User Metadata**: `clerk.UpdateUserMetadata(userId, metadata)`
+// Get active subscriptions by customer ID
+subscriptions := clerk.GetActiveSubscriptionsByCustomerID(customerID)
+
+// Add subscription to organization metadata
+clerk.AddSubscriptionToOrganizationMetadata(customerID, subscription)
+
+// Update subscription in organization metadata
+clerk.UpdateSubscriptionInOrganizationMetadata(customerID, subscription)
+
+// Remove subscription from organization metadata
+clerk.RemoveSubscriptionFromOrganizationMetadata(customerID, subscriptionID)
+```
+
+## Authentication
+
+### JWT Verification
+
+The service includes middleware for verifying Clerk JWT tokens:
+
+```go
+// Middleware that verifies JWT and extracts user ID
+auth.VerifyingMiddleware(next http.Handler)
+
+// Extract user ID from request context
+userID, ok := auth.GetUserID(r)
+```
+
+### Organization Resolution
+
+For authenticated requests, the service automatically resolves the user's organization:
+
+```go
+// Get user's organization ID
+organizationID, err := clerk.GetUserOrganizationId(userID)
+
+// Get organization metadata
+metadata, err := clerk.GetOrganizationPublicMetadata(organizationID)
+
+// Update organization metadata
+err = clerk.UpdateOrganizationPublicMetadata(organizationID, metadata)
+```
 
 ## Development
 
@@ -230,23 +323,31 @@ The service includes full user management capabilities through Clerk:
 
 ```
 nucleus/
-├── main.go              # Main application entry point
-├── Dockerfile           # Docker container configuration
-├── .dockerignore        # Docker build context exclusions
-├── go.mod               # Go module dependencies
-├── go.sum               # Go module checksums
-├── README.md            # This file
-├── .gitignore           # Git ignore rules
-├── cache/
-│   └── store.go         # Event cache management with automatic cleanup
+├── main.go                    # Main application entry point
+├── Dockerfile                 # Docker container configuration
+├── go.mod                     # Go module dependencies
+├── go.sum                     # Go module checksums
+├── README.md                  # This file
+├── api/
+│   └── handlers.go            # User API handlers
+├── auth/
+│   └── auth.go                # JWT authentication middleware
 ├── clerk/
-│   └── metadata.go      # Clerk user metadata management
+│   ├── handlers.go            # Clerk webhook handlers
+│   ├── organizations.go       # Organization management
+│   ├── subscription.go        # Subscription metadata management
+│   └── webhook.go            # Clerk webhook processing
 ├── stripe/
-│   ├── address.go       # Dynamic webhook IP validation
-│   └── webhook.go       # Stripe webhook handler and invoice processing
+│   ├── address.go             # Dynamic webhook IP validation
+│   ├── handlers.go            # Stripe event handlers
+│   └── webhook.go            # Stripe webhook processing
+├── supabase/
+│   └── organizations.go       # Database operations
 └── types/
-    └── cache/
-        └── cache_types.go # Cache data structures and cleanup logic
+    ├── clerk/
+    │   └── types.go          # Clerk webhook event types
+    └── supabase/
+        └── organizations.go   # Database model types
 ```
 
 ### Docker Configuration
@@ -254,19 +355,9 @@ nucleus/
 The project includes optimized Docker configuration:
 
 - **Multi-stage build**: Uses `golang:1.24-alpine` for efficient builds
-- **Security**: `.dockerignore` excludes sensitive files (`.env`, `.git`, etc.)
+- **Security**: Excludes sensitive files from build context
 - **Environment handling**: Graceful fallback from `.env` files to system environment variables
 - **Port exposure**: Exposes port 8080 for webhook endpoints
-
-### Cache System
-
-The application includes a sophisticated in-memory cache system for webhook event deduplication:
-
-- **Automatic Cleanup**: Expired entries are removed every 30 seconds via background goroutine
-- **Thread-safe**: Uses read-write mutex for concurrent access
-- **TTL**: 30-second expiration for cache entries
-- **Statistics**: Get cache size and entry information
-- **Memory Efficient**: Automatically removes expired entries to prevent memory leaks
 
 ### Webhook IP Validation
 
@@ -274,27 +365,27 @@ The service dynamically fetches the current list of Stripe webhook IPs from Stri
 
 ### Adding New Webhook Events
 
-To handle additional Stripe webhook events:
+To handle additional webhook events:
 
-1. Add a new case in the switch statement in `processWebhookEvent()`:
+#### For Stripe Events:
+1. Add a new case in the switch statement in `stripe/webhook.go`:
 ```go
 case "your.event.type":
-    var eventData YourEventStruct
-    jsonData, err := json.Marshal(event.Data.Object)
-    if err != nil {
-        log.Printf("Error marshaling webhook data: %v", err)
-        return
-    }
-    err = json.Unmarshal(jsonData, &eventData)
-    if err != nil {
-        log.Printf("Error parsing webhook JSON: %v", err)
-        return
-    }
     // Handle the event
 ```
 
-2. Implement the corresponding handler function
-3. Update your Stripe webhook configuration to listen for the new event
+2. Implement the corresponding handler function in `stripe/handlers.go`
+
+#### For Clerk Events:
+1. Add a new case in the switch statement in `clerk/webhook.go`:
+```go
+case "your.event.type":
+    return HandleYourEvent(event)
+```
+
+2. Implement the corresponding handler function in `clerk/handlers.go`
+
+3. Update your Clerk webhook configuration to listen for the new event
 
 ### Testing
 
@@ -304,13 +395,13 @@ For local development, you can use tools like:
 
 Example with Stripe CLI:
 ```bash
-stripe listen --forward-to localhost:8080/webhook
+stripe listen --forward-to localhost:8080/stripe/webhook
 ```
 
 For Docker testing:
 ```bash
 # Run with Stripe CLI forwarding
-stripe listen --forward-to localhost:8080/webhook
+stripe listen --forward-to localhost:8080/stripe/webhook
 
 # In another terminal, run the container
 docker run -p 8080:8080 --env-file .env nucleus
@@ -318,15 +409,13 @@ docker run -p 8080:8080 --env-file .env nucleus
 
 ## Security Considerations
 
-- Always verify webhook signatures using the provided secret
+- Always verify webhook signatures using the provided secrets
 - Dynamic webhook IP validation ensures requests only come from current Stripe IPs
 - Use HTTPS in production
-- Keep your Stripe and Clerk keys secure and never commit them to version control
+- Keep your Stripe, Clerk, and Supabase keys secure and never commit them to version control
 - Implement proper error handling and logging
 - Consider rate limiting for webhook endpoints
-- Event deduplication prevents replay attacks
-- Automatic cache cleanup prevents memory exhaustion
-- `.dockerignore` prevents sensitive files from being included in Docker images
+- JWT tokens are verified using Clerk's official SDK
 - Environment variables are passed securely to containers without embedding in images
 
 ## Dependencies
@@ -334,6 +423,8 @@ docker run -p 8080:8080 --env-file .env nucleus
 - `github.com/clerk/clerk-sdk-go/v2`: Clerk user management SDK
 - `github.com/joho/godotenv`: Environment variable management
 - `github.com/stripe/stripe-go/v82`: Stripe Go SDK
+- `github.com/supabase-community/supabase-go`: Supabase Go client
+- `github.com/svix/svix-webhooks`: Clerk webhook verification
 
 ## License
 
