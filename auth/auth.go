@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
 	clerkjwt "github.com/clerk/clerk-sdk-go/v2/jwt"
@@ -23,7 +24,9 @@ func GetUserID(r *http.Request) (string, bool) {
 // VerifyingMiddleware is the general middleware that verifies the passed JWT Token from clerk and extracts the user ID to pass it to the next handler
 func VerifyingMiddleware(next http.Handler) http.Handler {
 	return clerkhttp.RequireHeaderAuthorization()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[API] Verifying middleware")
+		log.Printf("[API] Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+		startTime := time.Now()
+
 		userID, err := extractUserIDFromAuthHeader(r)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -35,6 +38,7 @@ func VerifyingMiddleware(next http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
+		log.Printf("[API] Response: %s %s -> STATUS: %d completed in %v", r.Method, r.URL.Path, http.StatusOK, time.Since(startTime))
 	}))
 }
 
