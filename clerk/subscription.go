@@ -2,27 +2,21 @@ package clerk
 
 import (
 	"log"
+	"nucleus/supabase"
 	"time"
 
 	"github.com/stripe/stripe-go/v82"
-	"github.com/stripe/stripe-go/v82/customer"
 )
 
 // AddSubscriptionToOrganizationMetadata adds subscription information to user metadata
 func AddSubscriptionToOrganizationMetadata(customerId string, subscription *stripe.Subscription) {
-	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
+	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
-		log.Printf("Error getting stripe customer: %v", err)
+		log.Printf("Error getting organization: %v", err)
 		return
 	}
 
-	organizationId := stripeCustomer.Metadata["clerk_organization_id"]
-	if organizationId == "" {
-		log.Printf("Stripe customer %s has no clerk organization id", customerId)
-		return
-	}
-
-	metadata, err := GetOrganizationPublicMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -55,7 +49,7 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription *stri
 						subMap["current_period_end"] = currentPeriodEnd
 						subMap["product_id"] = subscription.Items.Data[0].Price.Product.ID
 						subMap["price_id"] = subscription.Items.Data[0].Price.ID
-						UpdateOrganizationPublicMetadata(organizationId, metadata)
+						UpdateOrganizationPublicMetadata(organization.ClerkID, metadata)
 						return
 					}
 				}
@@ -71,24 +65,18 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription *stri
 		}
 	}
 
-	UpdateOrganizationPublicMetadata(organizationId, metadata)
+	UpdateOrganizationPublicMetadata(organization.ClerkID, metadata)
 }
 
 // UpdateSubscriptionInOrganizationMetadata updates existing subscription information
 func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription *stripe.Subscription) {
-	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
+	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
-		log.Printf("Error getting stripe customer: %v", err)
+		log.Printf("Error getting organization: %v", err)
 		return
 	}
 
-	organizationId := stripeCustomer.Metadata["clerk_organization_id"]
-	if organizationId == "" {
-		log.Printf("Stripe customer %s has no clerk organization id", customerId)
-		return
-	}
-
-	metadata, err := GetOrganizationPublicMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -113,7 +101,7 @@ func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription *s
 							"product_id":         subscription.Items.Data[0].Price.Product.ID,
 							"price_id":           subscription.Items.Data[0].Price.ID,
 						}
-						UpdateOrganizationPublicMetadata(organizationId, metadata)
+						UpdateOrganizationPublicMetadata(organization.ClerkID, metadata)
 						return
 					}
 				}
@@ -124,19 +112,13 @@ func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription *s
 
 // RemoveSubscriptionFromOrganizationMetadata removes a subscription from user metadata
 func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionId string) {
-	stripeCustomer, err := customer.Get(customerId, &stripe.CustomerParams{})
+	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
-		log.Printf("Error getting stripe customer: %v", err)
+		log.Printf("Error getting organization: %v", err)
 		return
 	}
 
-	organizationId := stripeCustomer.Metadata["clerk_organization_id"]
-	if organizationId == "" {
-		log.Printf("Stripe customer %s has no clerk organization id", customerId)
-		return
-	}
-
-	metadata, err := GetOrganizationPublicMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return
@@ -153,7 +135,7 @@ func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionI
 				}
 			}
 			stripeData["subscriptions"] = updatedSubscriptions
-			UpdateOrganizationPublicMetadata(organizationId, metadata)
+			UpdateOrganizationPublicMetadata(organization.ClerkID, metadata)
 		}
 	}
 }
@@ -161,13 +143,13 @@ func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionI
 // HasActiveSubscription checks if a organization has an active subscription for a specific product
 // Returns true if the organization has an active subscription that hasn't expired
 func HasActiveSubscription(customerId string, productId string) bool {
-	organizationId, err := GetUserOrganizationId(customerId)
+	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
-		log.Printf("Error getting user organization id: %v", err)
+		log.Printf("Error getting organization: %v", err)
 		return false
 	}
 
-	metadata, err := GetOrganizationPublicMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return false
@@ -201,13 +183,13 @@ func HasActiveSubscription(customerId string, productId string) bool {
 
 // GetActiveSubscriptions returns all active subscriptions for a organization
 func GetActiveSubscriptions(customerId string) []map[string]interface{} {
-	organizationId, err := GetUserOrganizationId(customerId)
+	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
-		log.Printf("Error getting user organization id: %v", err)
+		log.Printf("Error getting organization: %v", err)
 		return nil
 	}
 
-	metadata, err := GetOrganizationPublicMetadata(organizationId)
+	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return nil
