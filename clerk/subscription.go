@@ -181,8 +181,8 @@ func HasActiveSubscription(customerId string, productId string) bool {
 	return false
 }
 
-// GetActiveSubscriptions returns all active subscriptions for a organization
-func GetActiveSubscriptions(customerId string) []map[string]interface{} {
+// GetActiveSubscriptionsByCustomerID returns all active subscriptions for a organization
+func GetActiveSubscriptionsByCustomerID(customerId string) []map[string]interface{} {
 	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
 		log.Printf("Error getting organization: %v", err)
@@ -190,6 +190,39 @@ func GetActiveSubscriptions(customerId string) []map[string]interface{} {
 	}
 
 	metadata, err := GetOrganizationPublicMetadata(organization.ClerkID)
+	if err != nil {
+		log.Printf("Error getting user metadata: %v", err)
+		return nil
+	}
+
+	var activeSubscriptions []map[string]interface{}
+	currentTime := time.Now().Unix()
+
+	if stripeData, ok := metadata["stripe"].(map[string]interface{}); ok {
+		if subscriptions, ok := stripeData["subscriptions"].([]interface{}); ok {
+			for _, sub := range subscriptions {
+				if subMap, ok := sub.(map[string]interface{}); ok {
+					// Check if subscription is active
+					if status, ok := subMap["status"].(string); ok && status == "active" {
+						// Check if subscription hasn't expired
+						if periodEnd, ok := subMap["current_period_end"].(float64); ok {
+							if int64(periodEnd) > currentTime {
+								activeSubscriptions = append(activeSubscriptions, subMap)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return activeSubscriptions
+}
+
+// GetActiveSubscriptions returns all active subscriptions for a organization
+func GetActiveSubscriptionsByOrganizationID(organizationID string) []map[string]interface{} {
+
+	metadata, err := GetOrganizationPublicMetadata(organizationID)
 	if err != nil {
 		log.Printf("Error getting user metadata: %v", err)
 		return nil

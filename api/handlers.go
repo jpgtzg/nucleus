@@ -15,6 +15,16 @@ func GetUserSuscriptionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subscriptions := clerk.GetActiveSubscriptions(userId)
+	// Get the organization ID from the user's organization memberships
+	organizationID, err := clerk.GetUserOrganizationId(userId)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the active subscriptions for the organization
+	subscriptions := clerk.GetActiveSubscriptionsByOrganizationID(organizationID)
+
+	// Return the subscriptions
 	json.NewEncoder(w).Encode(subscriptions)
 }
