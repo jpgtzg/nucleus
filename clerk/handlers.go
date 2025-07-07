@@ -75,5 +75,10 @@ func HandleOrganizationDeleted(event *ClerkWebhookEvent) error {
 		return err
 	}
 
+	err = supabase.DeleteOrganizationByClerkID(organizationId)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

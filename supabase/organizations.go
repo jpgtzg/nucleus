@@ -135,3 +135,29 @@ func UpdateOrganizationClerkID(stripeCustomerID string, clerkID string) error {
 
 	return nil
 }
+
+func DeleteOrganizationByClerkID(clerkID string) error {
+	_, _, err := client.From("organizations").
+		Delete("", "").
+		Eq("clerk_organization_id", clerkID).
+		Execute()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeleteOrganizationByStripeCustomerID(stripeCustomerID string) error {
+	_, _, err := client.From("organizations").
+		Delete("", "").
+		Eq("stripe_customer_id", stripeCustomerID).
+		Execute()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
