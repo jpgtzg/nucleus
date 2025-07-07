@@ -61,60 +61,27 @@ func processWebhookEvent(event *stripe.Event) {
 	log.Printf("[STRIPE] Processing webhook event: %s", event.Type)
 	var subscription stripe.Subscription
 
+	jsonData, err := json.Marshal(event.Data.Object)
+	if err != nil {
+		log.Printf("Error marshaling webhook data: %v", err)
+		return
+	}
+
+	err = json.Unmarshal(jsonData, &subscription)
+	if err != nil {
+		log.Printf("Error parsing webhook JSON: %v", err)
+		return
+	}
+
 	switch event.Type {
 	case "customer.subscription.created":
-		jsonData, err := json.Marshal(event.Data.Object)
-		if err != nil {
-			log.Printf("Error marshaling webhook data: %v", err)
-			return
-		}
-
-		err = json.Unmarshal(jsonData, &subscription)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v", err)
-			return
-		}
 		HandleSubscriptionCreated(&subscription)
-
 	case "customer.subscription.updated":
-		jsonData, err := json.Marshal(event.Data.Object)
-		if err != nil {
-			log.Printf("Error marshaling webhook data: %v", err)
-			return
-		}
-
-		err = json.Unmarshal(jsonData, &subscription)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v", err)
-			return
-		}
 		HandleSubscriptionUpdated(&subscription)
-
 	case "customer.subscription.deleted":
-		jsonData, err := json.Marshal(event.Data.Object)
-		if err != nil {
-			log.Printf("Error marshaling webhook data: %v", err)
-			return
-		}
-
-		err = json.Unmarshal(jsonData, &subscription)
-		if err != nil {
-			log.Printf("Error parsing webhook JSON: %v", err)
-			return
-		}
 		HandleSubscriptionDeleted(&subscription)
-
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
-
-		jsonData, err := json.Marshal(event.Data.Object)
-		if err != nil {
-			log.Printf("Error marshaling webhook data: %v", err)
-			return
-		}
-
-		os.WriteFile(event.ID+"_"+string(event.Type)+".json", jsonData, 0644)
-
 		return
 	}
 }
