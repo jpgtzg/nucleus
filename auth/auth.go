@@ -13,23 +13,16 @@ import (
 	clerkjwt "github.com/clerk/clerk-sdk-go/v2/jwt"
 )
 
-// UserIDKey is the context key for storing user ID
-type UserIDKey struct{}
-
+// OrganizationIDKey is the context key for storing organization ID
 type OrganizationIDKey struct{}
 
-// GetUserID retrieves the user ID from the request context
-func GetUserID(r *http.Request) (string, bool) {
-	userID, ok := r.Context().Value(UserIDKey{}).(string)
-	return userID, ok
-}
-
+// GetOrganizationID retrieves the organization ID from the request context
 func GetOrganizationID(r *http.Request) (string, bool) {
 	organizationID, ok := r.Context().Value(OrganizationIDKey{}).(string)
 	return organizationID, ok
 }
 
-// VerifyingMiddleware is the general middleware that verifies the passed JWT Token from clerk and extracts the user ID to pass it to the next handler
+// VerifyingMiddleware is the general middleware that verifies the passed JWT Token from clerk and extracts the user ID and organization ID to pass it to the next handler
 func VerifyingMiddleware(next http.Handler) http.Handler {
 	return clerkhttp.RequireHeaderAuthorization()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[API] Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
@@ -48,8 +41,7 @@ func VerifyingMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Add user ID to request context
-		ctx := context.WithValue(r.Context(), UserIDKey{}, userID)
-		ctx = context.WithValue(ctx, OrganizationIDKey{}, organizationID)
+		ctx := context.WithValue(r.Context(), OrganizationIDKey{}, organizationID)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
