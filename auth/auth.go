@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"nucleus/clerk"
 	"strings"
 	"time"
 
@@ -15,10 +16,17 @@ import (
 // UserIDKey is the context key for storing user ID
 type UserIDKey struct{}
 
+type OrganizationIDKey struct{}
+
 // GetUserID retrieves the user ID from the request context
 func GetUserID(r *http.Request) (string, bool) {
 	userID, ok := r.Context().Value(UserIDKey{}).(string)
 	return userID, ok
+}
+
+func GetOrganizationID(r *http.Request) (string, bool) {
+	organizationID, ok := r.Context().Value(OrganizationIDKey{}).(string)
+	return organizationID, ok
 }
 
 // VerifyingMiddleware is the general middleware that verifies the passed JWT Token from clerk and extracts the user ID to pass it to the next handler
@@ -33,8 +41,15 @@ func VerifyingMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		organizationID, err := clerk.GetUserOrganizationId(userID)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		// Add user ID to request context
 		ctx := context.WithValue(r.Context(), UserIDKey{}, userID)
+		ctx = context.WithValue(ctx, OrganizationIDKey{}, organizationID)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)

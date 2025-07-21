@@ -9,16 +9,10 @@ import (
 
 // GetUserSuscriptionsHandler is a handler that returns the user's subscriptions
 func GetUserSuscriptionsHandler(w http.ResponseWriter, r *http.Request) {
-	userId, ok := auth.GetUserID(r)
+	// Get the organization ID from the user's organization memberships
+	organizationID, ok := auth.GetOrganizationID(r)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Get the organization ID from the user's organization memberships
-	organizationID, err := clerk.GetUserOrganizationId(userId)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
