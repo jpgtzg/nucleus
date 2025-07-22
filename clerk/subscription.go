@@ -2,7 +2,8 @@ package clerk
 
 import (
 	"log"
-	"nucleus/supabase"
+	"nucleus/mongodb"
+
 	"time"
 
 	"github.com/stripe/stripe-go/v82"
@@ -10,7 +11,7 @@ import (
 
 // AddSubscriptionToOrganizationMetadata adds subscription information to user metadata
 func AddSubscriptionToOrganizationMetadata(customerId string, subscription *stripe.Subscription) {
-	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
+	organization, err := mongodb.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
 		log.Printf("Error getting organization: %v", err)
 		return
@@ -70,7 +71,7 @@ func AddSubscriptionToOrganizationMetadata(customerId string, subscription *stri
 
 // UpdateSubscriptionInOrganizationMetadata updates existing subscription information
 func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription *stripe.Subscription) {
-	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
+	organization, err := mongodb.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
 		log.Printf("Error getting organization: %v", err)
 		return
@@ -112,7 +113,7 @@ func UpdateSubscriptionInOrganizationMetadata(customerId string, subscription *s
 
 // RemoveSubscriptionFromOrganizationMetadata removes a subscription from user metadata
 func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionId string) {
-	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
+	organization, err := mongodb.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
 		log.Printf("Error getting organization: %v", err)
 		return
@@ -142,7 +143,7 @@ func RemoveSubscriptionFromOrganizationMetadata(customerId string, subscriptionI
 
 // GetActiveSubscriptionsByCustomerID returns all active subscriptions for a organization
 func GetActiveSubscriptionsByCustomerID(customerId string) []map[string]interface{} {
-	organization, err := supabase.GetOrganizationByStripeCustomerID(customerId)
+	organization, err := mongodb.GetOrganizationByStripeCustomerID(customerId)
 	if err != nil {
 		log.Printf("Error getting organization: %v", err)
 		return nil

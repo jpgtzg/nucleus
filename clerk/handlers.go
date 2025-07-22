@@ -3,7 +3,7 @@ package clerk
 import (
 	"encoding/json"
 	"log"
-	"nucleus/supabase"
+	"nucleus/mongodb"
 	"os"
 
 	"github.com/clerk/clerk-sdk-go/v2"
@@ -40,7 +40,7 @@ func HandleOrganizationCreated(event *ClerkWebhookEvent) error {
 		return err
 	}
 
-	err = supabase.CreateOrganization(organization.ID, customer.ID)
+	err = mongodb.CreateOrganizationSync(organization.ID, customer.ID)
 	if err != nil {
 		return err
 	}
@@ -64,9 +64,8 @@ func HandleOrganizationDeleted(event *ClerkWebhookEvent) error {
 		return err
 	}
 
-	organization, err := supabase.GetOrganizationByClerkID(organizationId)
+	organization, err := mongodb.GetOrganizationByClerkID(organizationId)
 	if err != nil {
-		supabase.DebugOrganizations()
 		return err
 	}
 
@@ -75,7 +74,7 @@ func HandleOrganizationDeleted(event *ClerkWebhookEvent) error {
 		return err
 	}
 
-	err = supabase.DeleteOrganizationByClerkID(organizationId)
+	err = mongodb.DeleteOrganizationByClerkID(organizationId)
 	if err != nil {
 		return err
 	}
