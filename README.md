@@ -10,7 +10,7 @@ Nucleus is the central control service of the platform that synchronizes billing
 - **Subscription-Based Access Control**: Comprehensive subscription tracking and management
 - **JWT Authentication**: Secure middleware for verifying Clerk JWT tokens
 - **Dynamic IP Validation**: Fetches current Stripe webhook IPs dynamically for enhanced security
-- **Supabase Integration**: Persistent storage for organization-customer mappings
+- **MongoDB Integration**: Persistent storage for organization-customer mappings
 - **Asynchronous Processing**: Webhook events are processed asynchronously for better performance
 - **Docker Support**: Containerized deployment with optimized build process
 
@@ -20,12 +20,12 @@ Nucleus acts as a bridge between three key services:
 
 1. **Clerk**: User identity and organization management
 2. **Stripe**: Payment processing and subscription management  
-3. **Supabase**: Persistent storage for organization-customer mappings
+3. **MongoDB**: Persistent storage for organization-customer mappings
 
 ### Data Flow
 
 ```
-Clerk Organization Created → Nucleus → Create Stripe Customer → Store in Supabase
+Clerk Organization Created → Nucleus → Create Stripe Customer → Store in MongoDB
 Stripe Subscription Event → Nucleus → Update Organization Metadata in Clerk
 User Request → Nucleus (JWT Auth) → Return User's Active Subscriptions
 ```
@@ -36,7 +36,7 @@ User Request → Nucleus (JWT Auth) → Return User's Active Subscriptions
 - Docker (for containerized deployment)
 - Stripe account with webhook endpoint configured
 - Clerk account for user identity management
-- Supabase project for data persistence
+- MongoDB database for data persistence
 
 ## Installation
 
@@ -59,8 +59,9 @@ STRIPE_KEY=sk_test_your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 CLERK_SECRET_KEY=your_clerk_secret_key
 CLERK_WEBHOOK_SECRET=whsec_your_clerk_webhook_secret
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_supabase_anon_key
+MONGO_URI=mongodb://localhost:27017
+MONGO_DATABASE=nucleus
+MONGO_COLLECTION_SYNC=organizations
 PORT=8080
 ```
 
@@ -110,18 +111,20 @@ The server will start listening on port 8080 and be accessible at `http://localh
    - `organization.deleted`
 5. Copy the webhook signing secret and add it to your `.env` file
 
-### Supabase Setup
+### MongoDB Setup
 
-1. Create a new Supabase project
-2. Create a table named `organizations` with the following schema:
-```sql
-CREATE TABLE organizations (
-  id SERIAL PRIMARY KEY,
-  clerk_organization_id TEXT UNIQUE NOT NULL,
-  stripe_customer_id TEXT UNIQUE NOT NULL
-);
+1. Set up a MongoDB database (local or cloud-based like MongoDB Atlas)
+2. Create a database with your preferred name
+3. Create a collection with your preferred name
+4. The collection will automatically store documents with the following structure:
+```json
+{
+  "_id": "ObjectId",
+  "clerk_organization_id": "string",
+  "stripe_customer_id": "string"
+}
 ```
-3. Copy your Supabase URL and anon key to your `.env` file
+5. Add your MongoDB connection URI to your `.env` file
 
 ## Usage
 
@@ -193,9 +196,9 @@ Handles incoming Stripe webhook events.
 Handles incoming Clerk webhook events.
 
 **Supported Events:**
-- `organization.created`: Creates new Stripe customer and stores mapping in Supabase
+- `organization.created`: Creates new Stripe customer and stores mapping in MongoDB
 - `organization.updated`: Handles organization updates (currently no-op)
-- `organization.deleted`: Deletes Stripe customer and removes mapping from Supabase
+- `organization.deleted`: Deletes Stripe customer and removes mapping from MongoDB
 
 **Security Features:**
 - Webhook signature verification using Svix
@@ -244,7 +247,7 @@ When a new organization is created in Clerk:
 
 1. Nucleus receives the `organization.created` webhook
 2. Creates a new Stripe customer with the organization name
-3. Stores the mapping between Clerk organization ID and Stripe customer ID in Supabase
+3. Stores the mapping between Clerk organization ID and Stripe customer ID in MongoDB
 4. This mapping enables subscription events to be properly routed to the correct organization
 
 ### Subscription Metadata Structure
@@ -341,12 +344,12 @@ nucleus/
 │   ├── address.go             # Dynamic webhook IP validation
 │   ├── handlers.go            # Stripe event handlers
 │   └── webhook.go            # Stripe webhook processing
-├── supabase/
-│   └── organizations.go       # Database operations
+├── mongodb/
+│   └── sync.go               # Database operations
 └── types/
     ├── clerk/
     │   └── types.go          # Clerk webhook event types
-    └── supabase/
+    └── mongodb/
         └── organizations.go   # Database model types
 ```
 
@@ -412,7 +415,7 @@ docker run -p 8080:8080 --env-file .env nucleus
 - Always verify webhook signatures using the provided secrets
 - Dynamic webhook IP validation ensures requests only come from current Stripe IPs
 - Use HTTPS in production
-- Keep your Stripe, Clerk, and Supabase keys secure and never commit them to version control
+- Keep your Stripe, Clerk, and MongoDB connection strings secure and never commit them to version control
 - Implement proper error handling and logging
 - Consider rate limiting for webhook endpoints
 - JWT tokens are verified using Clerk's official SDK
@@ -423,7 +426,7 @@ docker run -p 8080:8080 --env-file .env nucleus
 - `github.com/clerk/clerk-sdk-go/v2`: Clerk user management SDK
 - `github.com/joho/godotenv`: Environment variable management
 - `github.com/stripe/stripe-go/v82`: Stripe Go SDK
-- `github.com/supabase-community/supabase-go`: Supabase Go client
+- `go.mongodb.org/mongo-driver/v2`: MongoDB Go driver
 - `github.com/svix/svix-webhooks`: Clerk webhook verification
 
 ## License
