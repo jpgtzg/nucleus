@@ -25,6 +25,7 @@ func main() {
 	http.HandleFunc("/stripe/webhook", stripe.HandleWebhook)
 	http.HandleFunc("/clerk/webhook", clerk.HandleWebhook)
 	http.Handle("/user/subscriptions", auth.VerifyingMiddleware(http.HandlerFunc(api.GetUserSuscriptionsHandler)))
+	http.Handle("/user/stripe-customer-id", auth.VerifyingMiddleware(http.HandlerFunc(api.GetUserStripeCustomerIDHandler)))
 
 	addr := fmt.Sprintf(":%s", os.Getenv("PORT"))
 	fmt.Println("Listening on", addr)

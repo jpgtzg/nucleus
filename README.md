@@ -239,6 +239,26 @@ Returns the active subscriptions for the authenticated user's organization.
 - `401 Unauthorized`: Invalid or missing JWT token
 - `500 Internal Server Error`: Error retrieving user data
 
+#### GET `/user/stripe-customer-id`
+
+Returns the Stripe customer ID for the authenticated user's organization.
+
+**Authentication:**
+- Requires valid Clerk JWT token in Authorization header
+- Format: `Bearer <token>`
+
+**Response:**
+```json
+{
+  "stripe_customer_id": "cus_123"
+}
+```
+
+**Response Codes:**
+- `200 OK`: Stripe customer ID returned successfully
+- `401 Unauthorized`: Invalid or missing JWT token
+- `500 Internal Server Error`: Error retrieving user data
+
 ## Organization Management
 
 ### Automatic Customer Creation
