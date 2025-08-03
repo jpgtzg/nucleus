@@ -451,7 +451,7 @@ docker run -p 8080:8080 --env-file .env nucleus
 
 ## License
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
+This project is licensed under a proprietary license. See the [LICENSE](LICENSE) file for details.
 
 ## Contributors
 
